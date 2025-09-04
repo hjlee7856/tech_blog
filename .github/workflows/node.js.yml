@@ -24,7 +24,7 @@ jobs:
         cache: 'yarn' # npm 대신 yarn 캐시 사용
 
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      run: yarn install
 
     - name: Build project
       run: yarn build
