@@ -81,7 +81,6 @@ export default function NotionDomainPage(props: NotionDomainPageProps) {
         url={`https://${process.env.VERCEL_DOMAIN}`}
       />
       <NotionPageHeader />
-      {/* 캐로셀 */}
       {props.pages.length === 0 ? (
         <NotionGalleryCarousel pages={items.slice(0, 10)} />
       ) : (
@@ -90,7 +89,6 @@ export default function NotionDomainPage(props: NotionDomainPageProps) {
       <div className={styles.main}>
         <div className={styles.content}>
           <section className={styles.categorySection}>
-            {/* 카테고리 리스트 */}
             <NotionCategoryFilter
               activeCategory={activeCategory}
               categories={categories.map((category) => category.category)}
@@ -127,7 +125,6 @@ export default function NotionDomainPage(props: NotionDomainPageProps) {
               gap: 8,
             }}
           >
-            {/* 컨텐츠 표시 영역 */}
             {(() => {
               if (props.pages.length === 0 && loading) {
                 return (
