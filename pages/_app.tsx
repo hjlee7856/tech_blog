@@ -19,7 +19,6 @@ import { useRouter } from 'next/router';
 import { posthog } from 'posthog-js';
 import * as React from 'react';
 
-import GoogleAnalyticsProvider from '@/components/analytics/GoogleAnalyticsProvider';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/ToastProvider';
 import { usePreventDragAndContextMenuToast } from '@/components/usePreventDragAndContextMenuToast';
