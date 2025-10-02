@@ -56,12 +56,10 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router.events]);
 
   return (
-    <GoogleAnalyticsProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <Component {...pageProps} />
-        </AuthProvider>
-      </ToastProvider>
-    </GoogleAnalyticsProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Component {...pageProps} />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
