@@ -1,7 +1,5 @@
 import cs from 'classnames';
 import Cookies from 'js-cookie';
-import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import * as React from 'react';
 import { useNotionContext } from 'react-notion-x';

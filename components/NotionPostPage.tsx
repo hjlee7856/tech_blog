@@ -19,7 +19,6 @@ import { FloatingScrollTopButton } from './common/FloatingScrollTopButton';
 import { Code, Collection, Equation, Modal, Pdf } from './dynamicImport';
 import { Footer } from './Footer';
 import { Loading } from './Loading';
-import { NotionFooterCard } from './NotionFooterCard';
 import { NotionPageHeader } from './NotionPageHeader';
 import { NotionPageMeta } from './NotionPageMeta';
 import { Page404 } from './Page404';

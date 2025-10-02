@@ -11,7 +11,7 @@ export default siteConfig({
   // basic site info (required)
   name: 'HJ Tech Blog',
   domain: process.env.VERCEL_DOMAIN || 'localhost:3000',
-  author: 'HJ Tech Blog',
+  author: 'HJ',
 
   // open graph metadata (optional)
   description: 'HJ Tech Blog',
