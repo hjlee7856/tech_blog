@@ -76,8 +76,8 @@ export default function NotionDomainPage(props: NotionDomainPageProps) {
   return (
     <>
       <NotionPageMeta
-        title={'프론트엔드 개발자 이형준의 기술 블로그'}
-        description={'프론트엔드 개발자 이형준의 기술 블로그'}
+        title={'프론트엔드 개발자 HJ의 기술 블로그'}
+        description={'프론트엔드 개발자 HJ의 기술 블로그'}
         url={`https://${process.env.VERCEL_DOMAIN}`}
       />
       <NotionPageHeader />
