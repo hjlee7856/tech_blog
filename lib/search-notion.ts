@@ -24,16 +24,9 @@ async function searchNotionImpl(
         return res
       }
 
-      // convert non-2xx HTTP responses into errors
       const error: any = new Error(res.statusText)
       error.response = res
       throw error
     })
     .then((res) => res.json() as Promise<types.SearchResults>)
-
-  // return ky
-  //   .post(api.searchNotion, {
-  //     json: params
-  //   })
-  //   .json()
 }

@@ -1,12 +1,7 @@
-// -----------------------------------------------------------------------------
-// dynamic imports for optional components
-// -----------------------------------------------------------------------------
-
 import dynamic from 'next/dynamic'
 
 export const Code = dynamic(() =>
   import('react-notion-x/build/third-party/code').then(async (m) => {
-    // add / remove any prism syntaxes here
     await Promise.allSettled([
       // @ts-expect-error Ignore prisma types
       import('prismjs/components/prism-markup-templating.js'),

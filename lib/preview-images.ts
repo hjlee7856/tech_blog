@@ -49,7 +49,6 @@ async function createPreviewImage(
         return cachedPreviewImage
       }
     } catch (err: any) {
-      // ignore redis errors
       console.warn(`redis error get "${cacheKey}"`, err.message)
     }
 
@@ -65,7 +64,6 @@ async function createPreviewImage(
     try {
       await db.set(cacheKey, previewImage)
     } catch (err: any) {
-      // ignore redis errors
       console.warn(`redis error set "${cacheKey}"`, err.message)
     }
 
