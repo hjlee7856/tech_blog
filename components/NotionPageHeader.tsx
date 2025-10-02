@@ -52,12 +52,6 @@ export function NotionPageHeader() {
       })}
     >
       <div className="notion-nav-header">
-        <Link href={'/'}>
-          <div className="notion-nav-header-lhs logo color-logo">
-            <Image src="/logo.png" alt="Logo" fill sizes="(max-width: 768px) 120px, 180px" />
-          </div>
-        </Link>
-
         <div className="notion-nav-header-rhs breadcrumbs">
           {isPreviewPath && isLoggedIn ? (
             <components.Link
@@ -70,14 +64,7 @@ export function NotionPageHeader() {
             >
               로그아웃
             </components.Link>
-          ) : (
-            <components.Link
-              href={'https://daily-funding.com'}
-              className={cs(styles.navLink, 'breadcrumb', 'button')}
-            >
-              {'데일리펀딩 바로가기'}
-            </components.Link>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

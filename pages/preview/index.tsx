@@ -76,9 +76,8 @@ export default function NotionDomainPage(props: NotionDomainPageProps) {
   return (
     <>
       <NotionPageMeta
-        title={'데일리펀딩의 특별한 블로그, 데일리 인사이트'}
-        description={'일상이 특별해지는 금융 데일리펀딩의 이야기가 담긴 블로그'}
-        image={'/sns_logo.png'}
+        title={'프론트엔드 개발자 이형준의 기술 블로그'}
+        description={'프론트엔드 개발자 이형준의 기술 블로그'}
         url={`https://${process.env.VERCEL_DOMAIN}`}
       />
       <NotionPageHeader />

@@ -214,7 +214,6 @@ export function NotionPostPage({
           <div className={'notion-page'}>
             {/* 공유버튼 */}
             <ShareButton />
-            <NotionFooterCard />
           </div>
         </div>
         <Footer />

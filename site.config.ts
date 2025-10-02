@@ -1,4 +1,4 @@
-import { siteConfig } from './lib/site-config'
+import { siteConfig } from './lib/site-config';
 
 export default siteConfig({
   // the site's root Notion page (required)
@@ -9,19 +9,19 @@ export default siteConfig({
   rootNotionSpaceId: null,
 
   // basic site info (required)
-  name: 'Daily Blog',
+  name: 'HJ Tech Blog',
   domain: process.env.VERCEL_DOMAIN || 'localhost:3000',
-  author: 'Daily Funding',
+  author: 'HJ Tech Blog',
 
   // open graph metadata (optional)
-  description: 'Daily Blog',
+  description: 'HJ Tech Blog',
 
   // social usernames (optional)
-  // twitter: 'daily_funding',
-  // github: 'daily-funding',
-  // linkedin: 'daily-funding',
-  instagram: 'https://www.instagram.com/dailyfunding/',
-  brunch: 'https://brunch.co.kr/@dailian#articles',
+  // twitter: '#',
+  // github: '#',
+  // linkedin: '#',
+  // instagram: '#',
+  // brunch: '#',
   // mastodon: '#', // optional mastodon profile URL, provides link verification
   // newsletter: '#', // optional newsletter URL
   // youtube: '#', // optional youtube channel name or `channel/UCGbXXXXXXXXXXXXXXXXXXXXXX`
@@ -53,7 +53,7 @@ export default siteConfig({
   // whether to use the default notion navigation style or a custom one with links to
   // important pages. To use `navigationLinks`, set `navigationStyle` to `custom`.
   // navigationStyle: 'default',
-  navigationStyle: 'custom'
+  navigationStyle: 'custom',
   // navigationLinks: [
   //   {
   //     title: 'About',
@@ -64,4 +64,4 @@ export default siteConfig({
   //     pageId: '6a29ebcb935a4f0689fe661ab5f3b8d1'
   //   }
   // ]
-})
+});

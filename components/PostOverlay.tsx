@@ -48,9 +48,6 @@ export function PostOverlay({ title, subtitle, category, className, preview }: P
         <h1 className={styles.postOverlayTitle}>{title}</h1>
         {subtitle && <h2 className={styles.postOverlaySubtitle}>{subtitle}</h2>}
       </div>
-      <div className={styles.postOverlayImageContainer}>
-        <Image src="/postLogo.png" alt="logo" fill sizes="120px" />
-      </div>
     </div>
   );
 }

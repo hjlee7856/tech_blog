@@ -1,10 +1,10 @@
 {
-  "name": "dailyblog",
+  "name": "hjtechblog",
   "version": "1.0.0",
   "private": true,
-  "description": "daily funding blog",
+  "description": "HJ Tech Blog",
   "author": "hyeongjun <hyeongjun@daily-funding.com>",
-  "repository": "dailyblog",
+  "repository": "hjtechblog",
   "packageManager": "yarn@1.22.22",
   "engines": {
     "node": ">=22"
