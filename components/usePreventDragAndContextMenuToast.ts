@@ -2,10 +2,7 @@ import { useEffect } from 'react';
 
 export function usePreventDragAndContextMenuToast() {
   useEffect(() => {
-    const contextHandler = (e: MouseEvent) => {
-      e.preventDefault();
-      alert('복사 방지를 위해 우클릭은 불가능 합니다.');
-    };
+    const contextHandler = () => {};
 
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'c') {

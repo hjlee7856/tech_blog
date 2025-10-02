@@ -34,26 +34,31 @@
 .notion-page {
   padding-inline: 0;
   padding-bottom: calc(max(5vh, 32px)) !important;
-  line-height: 1.65;
+  line-height: 1.5;
+  font-size: 16px;
 }
 
 .notion-h-title {
-  font-weight: 800;
-  font-size: 1.3rem;
+  font-weight: 700;
+  font-size: 2.5rem;
+  line-height: 1.2;
 }
 
-/* TODO: 본문 간격*/
+/* 본문 텍스트 */
 .notion-text {
-  font-size: 1.3rem;
-  font-weight: 200;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 3px 0;
 }
 
 .notion-asset-caption {
   text-align: center;
-  font-size: 1rem;
+  font-size: 14px;
   background-color: #f7f7f7;
-  font-weight: 300;
+  font-weight: 400;
   padding: 1rem;
+  color: rgba(55, 53, 47, 0.65);
 }
 
 .notion-asset-wrapper {
@@ -252,43 +257,59 @@
 }
 
 .notion-quote {
-  padding: 0.2em 0.75em;
+  padding: 0.2em 0.9em;
   line-height: 1.5;
   font-style: italic;
-  font-size: 1.2em;
-  border-left: 4px solid #67bdfc;
-  text-align: center;
+  font-size: 16px;
+  border-left: 3px solid currentColor;
+  text-align: left;
 }
 
-/* TODO: 중제 간격*/
-.notion-h1,
-.notion-h2,
+/* 제목 스타일 */
+.notion-h1 {
+  font-size: 1.875em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 2em;
+  margin-bottom: 4px;
+}
+
+.notion-h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.4em;
+  margin-bottom: 1px;
+}
+
 .notion-h3 {
-  margin: 0;
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1em;
+  margin-bottom: 1px;
 }
 
 .notion-h {
-  margin: 0 !important;
+  font-weight: 600;
 }
 
 .notion-default {
-  letter-spacing: 0.32px;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .notion-callout {
   margin: 0.75em 0;
+  padding: 16px;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .notion-hr {
-  width: 483px;
-  margin: 2em 0;
-  height: 21px;
-  margin: 60px auto;
+  margin: 1.5em 0;
   border: none;
-  background-image: url(/hr_bar.png);
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  border-top: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 @media only screen and (max-width: 920px) {
