@@ -1,31 +1,39 @@
-/**
- * 게시글 조회수 증가 API 호출 함수
- * @param pageId - 조회수를 증가시킬 Notion page id
- * @returns 성공 여부(boolean)
- */
-interface IncreaseViewResponse {
-  success?: boolean
-}
+import { supabase } from '@/lib/supabaseClient';
 
 export async function increaseNotionView(pageId: string): Promise<boolean> {
-  try {
-    const res = await fetch('/api/increase-post-view', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ page_id: pageId })
-    })
+  if (!pageId || typeof pageId !== 'string') {
+    return false;
+  }
 
-    if (!res.ok) {
-      // 405, 400 등 에러 응답 처리
-      return false
+  try {
+    const { data: before, error: err1 } = await supabase
+      .from('notion_pages')
+      .select('view_count')
+      .eq('id', pageId)
+      .single();
+
+    if (err1 && err1.code !== 'PGRST116') {
+      throw new Error(err1?.message || 'DB error');
     }
 
-    const data = (await res.json()) as IncreaseViewResponse
-    return data?.success === true
-  } catch {
-    // 네트워크 등 예외 상황 처리
-    return false
+    if (!before) {
+      return false;
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('notion_pages')
+      .update({ view_count: before.view_count + 1 })
+      .eq('id', pageId)
+      .select('view_count')
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return !!updated;
+  } catch (err: any) {
+    console.error('increaseNotionView error:', err);
+    return false;
   }
 }

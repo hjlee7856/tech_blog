@@ -1,72 +1,60 @@
-import {
-  type ExtendedRecordMap,
-  type SearchParams,
-  type SearchResults
-} from 'notion-types'
-import { mergeRecordMaps } from 'notion-utils'
-import pMap from 'p-map'
-import pMemoize from 'p-memoize'
+import { unstable_cache } from 'next/cache';
+import { type ExtendedRecordMap, type SearchParams, type SearchResults } from 'notion-types';
+import { mergeRecordMaps } from 'notion-utils';
+import pMap from 'p-map';
+import pMemoize from 'p-memoize';
 
-import {
-  isPreviewImageSupportEnabled,
-  navigationLinks,
-  navigationStyle
-} from './config'
-import { getTweetsMap } from './get-tweets'
-import { notion } from './notion-api'
-import { getPreviewImageMap } from './preview-images'
+import { isPreviewImageSupportEnabled, navigationLinks, navigationStyle } from './config';
 
-const getNavigationLinkPages = pMemoize(
-  async (): Promise<ExtendedRecordMap[]> => {
-    const navigationLinkPageIds = (navigationLinks || [])
-      .map((link) => link?.pageId)
-      .filter(Boolean)
+import { notion } from './notion-api';
+import { getPreviewImageMap } from './preview-images';
 
-    if (navigationStyle !== 'default' && navigationLinkPageIds.length) {
-      return pMap(
-        navigationLinkPageIds,
-        async (navigationLinkPageId) =>
-          notion.getPage(navigationLinkPageId, {
-            chunkLimit: 1,
-            fetchMissingBlocks: false,
-            fetchCollections: false,
-            signFileUrls: false
-          }),
-        {
-          concurrency: 4
-        }
-      )
-    }
+const getNavigationLinkPages = pMemoize(async (): Promise<ExtendedRecordMap[]> => {
+  const navigationLinkPageIds = (navigationLinks || []).map((link) => link?.pageId).filter(Boolean);
 
-    return []
+  if (navigationStyle !== 'default' && navigationLinkPageIds.length) {
+    return pMap(
+      navigationLinkPageIds,
+      async (navigationLinkPageId) =>
+        notion.getPage(navigationLinkPageId, {
+          chunkLimit: 1,
+          fetchMissingBlocks: false,
+          fetchCollections: false,
+          signFileUrls: false,
+        }),
+      {
+        concurrency: 4,
+      },
+    );
   }
-)
 
-export async function getPage(pageId: string): Promise<ExtendedRecordMap> {
-  let recordMap = await notion.getPage(pageId)
+  return [];
+});
+
+const getPageUncached = async (pageId: string): Promise<ExtendedRecordMap> => {
+  let recordMap = await notion.getPage(pageId);
 
   if (navigationStyle !== 'default') {
-    const navigationLinkRecordMaps = await getNavigationLinkPages()
+    const navigationLinkRecordMaps = await getNavigationLinkPages();
 
     if (navigationLinkRecordMaps?.length) {
       recordMap = navigationLinkRecordMaps.reduce(
-        (map, navigationLinkRecordMap) =>
-          mergeRecordMaps(map, navigationLinkRecordMap),
-        recordMap
-      )
+        (map, navigationLinkRecordMap) => mergeRecordMaps(map, navigationLinkRecordMap),
+        recordMap,
+      );
     }
   }
 
   if (isPreviewImageSupportEnabled) {
-    const previewImageMap = await getPreviewImageMap(recordMap)
-    ;(recordMap as any).preview_images = previewImageMap
+    const previewImageMap = await getPreviewImageMap(recordMap);
+    (recordMap as any).preview_images = previewImageMap;
   }
 
-  await getTweetsMap(recordMap)
+  return recordMap;
+};
 
-  return recordMap
-}
+export const getPage = unstable_cache(getPageUncached, ['getPage'], { revalidate: 3600 });
 
 export async function search(params: SearchParams): Promise<SearchResults> {
-  return notion.search(params)
+  return notion.search(params);
 }

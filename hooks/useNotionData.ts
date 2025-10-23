@@ -12,7 +12,6 @@ interface UseNotionDataProps {
   initialTotal: number;
   initialCategories: { category: string; order: number }[];
   pageSize: number;
-  isPreview?: boolean;
 }
 
 export function useNotionData({
@@ -20,11 +19,12 @@ export function useNotionData({
   initialTotal,
   initialCategories,
   pageSize,
-  isPreview = false,
 }: UseNotionDataProps) {
   const [items, setItems] = useState<NotionPage[]>(initialPages || []);
   const [total, setTotal] = useState(initialTotal || 0);
-  const [categories, setCategories] = useState(initialCategories.sort((a, b) => a.order - b.order));
+  const [categories, setCategories] = useState(
+    initialCategories.toSorted((a, b) => a.order - b.order),
+  );
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState('전체');
@@ -36,14 +36,9 @@ export function useNotionData({
     try {
       let result;
       if (searchTerm.trim() !== '') {
-        result = await getSearchedNotionPages(searchTerm, currentPage, pageSize, isPreview);
+        result = await getSearchedNotionPages(searchTerm, currentPage, pageSize);
       } else {
-        result = await handleNotionPagesByCategory(
-          activeCategory,
-          currentPage,
-          pageSize,
-          isPreview,
-        );
+        result = await handleNotionPagesByCategory(activeCategory, currentPage, pageSize);
       }
 
       if (result) {
@@ -57,7 +52,7 @@ export function useNotionData({
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, currentPage, pageSize, searchTerm, isPreview]);
+  }, [activeCategory, currentPage, pageSize, searchTerm]);
 
   // 카테고리, 페이지, 검색어 변경 시 데이터 페칭
   useEffect(() => {
@@ -78,11 +73,11 @@ export function useNotionData({
       setLoading(true);
       try {
         if (categories.length === 0) {
-          const cats = await getNotionCategories(true);
-          setCategories(cats.sort((a, b) => a.order - b.order));
+          const cats = await getNotionCategories();
+          setCategories(cats.toSorted((a, b) => a.order - b.order));
         }
         if (items.length === 0) {
-          const res = await getNotionPages(true, 1, pageSize, isPreview);
+          const res = await getNotionPages(true, 1, pageSize);
           setItems(res.data);
           setTotal(res.total);
         }

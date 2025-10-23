@@ -1,37 +1,51 @@
+import { unstable_cache } from 'next/cache';
+
 import type { NotionPage } from '@/lib/notion-page';
+import { supabase } from '@/lib/supabaseClient';
 
 export interface NotionPagesResult {
   data: NotionPage[];
   total: number;
 }
 
-export const getNotionPages = async (
+const getNotionPagesUncached = async (
   isClient?: boolean,
   page = 1,
   pageSize = 12,
-  isPreview = false,
 ): Promise<NotionPagesResult> => {
   try {
-    let baseUrl = '';
-    if (!isClient) {
-      baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { count: countResult, error: countError } = await supabase
+      .from('notion_pages')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      throw new Error(`Count error: ${countError.message}`);
     }
-    const res = await fetch(
-      `${baseUrl}/api/get-notion-pages?page=${page}&pageSize=${pageSize}&isPreview=${isPreview}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      },
-    );
-    if (!res.ok) throw new Error('Failed to fetch notion pages');
-    const result = await res.json();
-    return result as NotionPagesResult;
+
+    const { data: dataResult, error: dataError } = await supabase
+      .from('notion_pages')
+      .select('*')
+      .order('created_date', { ascending: false })
+      .range(from, to);
+
+    if (dataError) {
+      throw new Error(`Data error: ${dataError.message}`);
+    }
+
+    return { data: dataResult as NotionPage[], total: countResult || 0 };
   } catch (err: any) {
-    console.error(err.message);
+    console.error('getNotionPages error:', err);
     return { data: [], total: 0 };
   }
 };
+
+export const getNotionPages = unstable_cache(
+  getNotionPagesUncached,
+  ['getNotionPages'],
+  {
+    revalidate: 3600,
+  }
+);

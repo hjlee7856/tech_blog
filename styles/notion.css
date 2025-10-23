@@ -639,3 +639,7 @@
 .notion-equation.notion-equation-block {
   align-items: center;
 }
+
+.notion-table-of-contents-item:hover {
+  background-color: #f2f3f6 !important;
+}
