@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import type { NotionPage } from '@/lib/notion-page';
 
 import { getNotionCategories } from '../server/get-notion-categories';
-import { getNotionPages } from '../server/get-notion-pages';
 import { handleNotionPagesByCategory } from '../server/get-notion-pages-by-category';
 import { getSearchedNotionPages } from '../server/get-search-notion-pages';
 
@@ -12,7 +11,6 @@ interface UseNotionDataProps {
   initialTotal: number;
   initialCategories: { category: string; order: number }[];
   pageSize: number;
-  isPreview?: boolean;
 }
 
 export function useNotionData({
@@ -20,11 +18,12 @@ export function useNotionData({
   initialTotal,
   initialCategories,
   pageSize,
-  isPreview = false,
 }: UseNotionDataProps) {
   const [items, setItems] = useState<NotionPage[]>(initialPages || []);
   const [total, setTotal] = useState(initialTotal || 0);
-  const [categories, setCategories] = useState(initialCategories.sort((a, b) => a.order - b.order));
+  const [categories, setCategories] = useState(
+    initialCategories.toSorted((a, b) => a.order - b.order),
+  );
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState('전체');
@@ -36,14 +35,20 @@ export function useNotionData({
     try {
       let result;
       if (searchTerm.trim() !== '') {
-        result = await getSearchedNotionPages(searchTerm, currentPage, pageSize, isPreview);
+        result = await getSearchedNotionPages(searchTerm, currentPage, pageSize);
+      } else if (activeCategory === '전체') {
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          pageSize: pageSize.toString(),
+        });
+        const res = await fetch(`/api/get-notion-pages?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch pages');
+        result = (await res.json()) as { data: NotionPage[]; total: number };
       } else {
-        result = await handleNotionPagesByCategory(
-          activeCategory,
-          currentPage,
-          pageSize,
-          isPreview,
-        );
+        result = (await handleNotionPagesByCategory(activeCategory, currentPage, pageSize)) as {
+          data: NotionPage[];
+          total: number;
+        };
       }
 
       if (result) {
@@ -57,7 +62,7 @@ export function useNotionData({
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, currentPage, pageSize, searchTerm, isPreview]);
+  }, [activeCategory, currentPage, pageSize, searchTerm]);
 
   // 카테고리, 페이지, 검색어 변경 시 데이터 페칭
   useEffect(() => {
@@ -72,39 +77,21 @@ export function useNotionData({
     }
   }, [currentPage, activeCategory, searchTerm, fetchData, initialPages, initialTotal]);
 
-  // 최초 마운트 시 카테고리/아이템 데이터가 없으면 클라이언트 사이드에서 가져오기
+  // 최초 마운트 시 카테고리 데이터가 없으면 클라이언트 사이드에서 가져오기
   useEffect(() => {
     const fetchInitialData = async () => {
-      setLoading(true);
       try {
         if (categories.length === 0) {
-          const cats = await getNotionCategories(true);
-          setCategories(cats.sort((a, b) => a.order - b.order));
-        }
-        if (items.length === 0) {
-          const res = await getNotionPages(true, 1, pageSize, isPreview);
-          setItems(res.data);
-          setTotal(res.total);
+          const cats = await getNotionCategories();
+          setCategories(cats.toSorted((a, b) => a.order - b.order));
         }
       } catch (err) {
         console.error('Error fetching initial data:', err);
-      } finally {
-        setLoading(false);
       }
     };
 
     void fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 최초 마운트 시 쿼리스트링 category 파싱
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const categoryFromQuery = params.get('category');
-    if (categoryFromQuery) {
-      setActiveCategory(decodeURIComponent(categoryFromQuery));
-      setCurrentPage(1);
-    }
   }, []);
 
   const handleCategoryChange = useCallback((category: string) => {
