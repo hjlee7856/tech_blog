@@ -6,11 +6,11 @@ import { increaseNotionView } from '@/server/increase-notion-view';
 import { NotionPostPageClient } from './post-client';
 
 interface PostPageProps {
-  params: Promise<{ pageId: string }> | { pageId: string };
+  params: Promise<{ pageId: string }>;
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { pageId } = await Promise.resolve(params);
+  const { pageId } = await params;
 
   if (!pageId) {
     notFound();
