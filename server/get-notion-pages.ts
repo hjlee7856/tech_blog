@@ -28,7 +28,7 @@ const getNotionPagesUncached = async (
     const { data: dataResult, error: dataError } = await supabase
       .from('notion_pages')
       .select('*')
-      .order('created_date', { ascending: false })
+      .order('post_id', { ascending: false })
       .range(from, to);
 
     if (dataError) {
@@ -42,10 +42,6 @@ const getNotionPagesUncached = async (
   }
 };
 
-export const getNotionPages = unstable_cache(
-  getNotionPagesUncached,
-  ['getNotionPages'],
-  {
-    revalidate: 3600,
-  }
-);
+export const getNotionPages = unstable_cache(getNotionPagesUncached, ['getNotionPages'], {
+  revalidate: 3600,
+});
