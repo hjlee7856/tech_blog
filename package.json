@@ -11,6 +11,7 @@
   },
   "type": "module",
   "scripts": {
+    "prebuild": "panda codegen",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -62,6 +63,7 @@
   "devDependencies": {
     "@fisch0920/config": "^1.1.2",
     "@next/bundle-analyzer": "^15.3.3",
+    "@pandacss/dev": "^1.4.3",
     "@types/cookie": "^0.6.0",
     "@types/js-cookie": "^3.0.6",
     "@types/jsonwebtoken": "^9.0.6",

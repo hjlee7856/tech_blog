@@ -1,25 +1,36 @@
-import styles from './NotionGalleryCarousel.module.css';
+import { Container, Dot, Pagination } from './NotionGalleryCarousel.styles';
 
-/**
- * NotionGalleryCarouselSkeleton
- * - 캐러셀의 카드 레이아웃과 동일하게 shimmer 효과로 스켈레톤 표시
- * - 반응형, 접근성, 최신 스타일 적용
- */
-export function NotionGalleryCarouselSkeleton() {
-  // 캐러셀에서 보여줄 카드 개수 (반응형 고려, 기본 3)
-  const skeletonCount = 1;
+const SKELETON_COUNT = 1
+const SKELETON_GRADIENT = 'linear-gradient(90deg, #e3e3e3 25%, #f5f5f5 50%, #e3e3e3 75%)'
+const SKELETON_STYLE = {
+  background: SKELETON_GRADIENT,
+  backgroundSize: '200% 100%',
+  animation: 'skeleton-loading 1.2s infinite linear',
+}
+
+function SkeletonPlaceholder({ width, height, borderRadius = '8px' }: { width: string | number; height: string | number; borderRadius?: string }) {
   return (
-    <section
-      className={styles.carouselContainer}
+    <div
+      style={{
+        width,
+        height,
+        borderRadius,
+        color: 'transparent',
+        ...SKELETON_STYLE,
+      }}
+    >
+      &nbsp;
+    </div>
+  )
+}
+
+export function NotionGalleryCarouselSkeleton() {
+  return (
+    <Container
       aria-busy="true"
       aria-label="캐러셀 스켈레톤"
       role="status"
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '75vh',
-        overflow: 'hidden',
-      }}
+      style={{ overflow: 'hidden' }}
     >
       <div
         style={{
@@ -53,13 +64,11 @@ export function NotionGalleryCarouselSkeleton() {
             style={{
               width: '100%',
               height: '65%',
-              backgroundSize: '200% 100%',
-              animation: 'skeleton-loading 1.2s infinite linear',
+              ...SKELETON_STYLE,
             }}
           />
           {/* 오버레이 텍스트 영역 */}
           <div
-            className={styles.overlay}
             style={{
               width: '100%',
               minHeight: 120,
@@ -70,78 +79,30 @@ export function NotionGalleryCarouselSkeleton() {
               gap: 18,
             }}
           >
-            {/* 카테고리 */}
-            <div
-              className={styles.category}
-              style={{
-                width: 100,
-                height: 26,
-                borderRadius: 22,
-                background: 'linear-gradient(90deg, #e3e3e3 25%, #f5f5f5 50%, #e3e3e3 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'skeleton-loading 1.2s infinite linear',
-                color: 'transparent',
-                marginBottom: 18,
-              }}
-            >
-              &nbsp;
-            </div>
-            {/* 타이틀 */}
-            <div
-              className={styles.title}
-              style={{
-                width: '65%',
-                height: 36,
-                borderRadius: 8,
-                background: 'linear-gradient(90deg, #e3e3e3 25%, #f5f5f5 50%, #e3e3e3 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'skeleton-loading 1.2s infinite linear',
-                color: 'transparent',
-                marginBottom: 12,
-              }}
-            >
-              &nbsp;
-            </div>
-            {/* 서브타이틀 */}
-            <div
-              className={styles.subtitle}
-              style={{
-                width: '85%',
-                height: 24,
-                borderRadius: 8,
-                background: 'linear-gradient(90deg, #e3e3e3 25%, #f5f5f5 50%, #e3e3e3 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'skeleton-loading 1.2s infinite linear',
-                color: 'transparent',
-              }}
-            >
-              &nbsp;
-            </div>
+            <SkeletonPlaceholder width="100px" height="26px" borderRadius="22px" />
+            <SkeletonPlaceholder width="65%" height="36px" />
+            <SkeletonPlaceholder width="85%" height="24px" />
           </div>
         </div>
       </div>
       {/* 페이지네이션 점 스켈레톤 */}
-      <div className={styles.pagination} aria-hidden="true">
-        {Array.from({ length: skeletonCount }).map((_, idx) => (
-          <div
+      <Pagination aria-hidden="true">
+        {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
+          <Dot
             key={idx}
-            className={styles.dot}
             style={{
               background: '#e0e0e0',
               opacity: 0.5,
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
             }}
           />
         ))}
-      </div>
+      </Pagination>
       <style>{`
         @keyframes skeleton-loading {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
       `}</style>
-    </section>
-  );
+    </Container>
+  )
 }

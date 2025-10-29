@@ -10,7 +10,6 @@ import { mapImageUrl } from '@/lib/map-image-url';
 import { mapPageUrl } from '@/lib/map-page-url';
 import { searchNotion } from '@/lib/search-notion';
 import type * as types from '@/lib/types';
-import { useDarkMode } from '@/lib/use-dark-mode';
 
 import { FloatingScrollTopButton } from '../../../../components/Button/Floating/FloatingScrollTopButton';
 import { ShareButton } from '../../../../components/Button/Share/Share';
@@ -60,7 +59,11 @@ export function getCollectionRowProps(
   return { title, subtitle, category };
 }
 
-export function NotionPostPage({ site, recordMap, error }: types.PageProps) {
+interface NotionPostPageProps extends types.PageProps {
+  isDarkMode: boolean;
+}
+
+export function NotionPostPage({ site, recordMap, error }: NotionPostPageProps) {
   const lite = useSearchParam('lite');
   const components = React.useMemo<Partial<NotionComponents>>(
     () => ({
@@ -77,10 +80,6 @@ export function NotionPostPage({ site, recordMap, error }: types.PageProps) {
   );
 
   // lite mode is for oembed
-  const isLiteMode = lite === 'true';
-
-  const { isDarkMode } = useDarkMode();
-
   const siteMapPageUrl = React.useMemo(() => {
     const params: any = {};
     if (lite) params.lite = lite;
@@ -103,15 +102,15 @@ export function NotionPostPage({ site, recordMap, error }: types.PageProps) {
       <PostOverlay {...getCollectionRowProps(recordMap, block)} />
 
       {/* notion renderer */}
-      <div className={cs('notion', isDarkMode ? 'dark-mode' : 'light-mode')}>
+      <div className={cs('notion', 'light-mode')}>
         <NotionRenderer
           bodyClassName="notion"
-          darkMode={isDarkMode}
+          darkMode={false}
           components={components}
           recordMap={recordMap}
           rootPageId={site.rootNotionPageId}
           rootDomain={site.domain}
-          fullPage={!isLiteMode}
+          fullPage={!false}
           previewImages={!!recordMap.preview_images}
           showCollectionViewDropdown={false}
           showTableOfContents={false}

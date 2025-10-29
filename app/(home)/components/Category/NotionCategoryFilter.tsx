@@ -1,10 +1,10 @@
-import { CategoryFilterSkeleton } from './CategoryFilterSkeleton';
-import styles from './NotionCategoryFilter.module.css';
+import { CategoryFilterSkeleton } from './CategoryFilterSkeleton'
+import { Container, Button, ActiveButton } from './NotionCategoryFilter.styles'
 
 interface NotionCategoryFilterProps {
-  onCategoryChange: (category: string) => Promise<void>;
-  activeCategory: string;
-  categories: string[];
+  onCategoryChange: (category: string) => Promise<void>
+  activeCategory: string
+  categories: { category: string; order: number; count: number }[]
 }
 
 export function NotionCategoryFilter({
@@ -13,26 +13,37 @@ export function NotionCategoryFilter({
   categories,
 }: NotionCategoryFilterProps) {
   if (!categories || categories.length === 0) {
-    return <CategoryFilterSkeleton />;
+    return <CategoryFilterSkeleton />
   }
 
   return (
-    <div className={styles.categoryFilter}>
-      <button
-        className={`${styles.categoryButton} ${activeCategory === '전체' ? styles.active : ''}`}
-        onClick={() => onCategoryChange('전체')}
-      >
-        전체
-      </button>
+    <Container>
+      {activeCategory === '전체' ? (
+        <ActiveButton onClick={() => onCategoryChange('전체')}>
+          전체
+        </ActiveButton>
+      ) : (
+        <Button onClick={() => onCategoryChange('전체')}>
+          전체
+        </Button>
+      )}
       {categories.map((cat) => (
-        <button
-          key={cat}
-          className={`${styles.categoryButton} ${activeCategory === cat ? styles.active : ''}`}
-          onClick={() => onCategoryChange(cat)}
-        >
-          {cat}
-        </button>
+        activeCategory === cat.category ? (
+          <ActiveButton
+            key={cat.category}
+            onClick={() => onCategoryChange(cat.category)}
+          >
+            {cat.category} ({cat.count})
+          </ActiveButton>
+        ) : (
+          <Button
+            key={cat.category}
+            onClick={() => onCategoryChange(cat.category)}
+          >
+            {cat.category} ({cat.count})
+          </Button>
+        )
       ))}
-    </div>
-  );
+    </Container>
+  )
 }

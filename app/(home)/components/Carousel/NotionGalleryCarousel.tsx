@@ -1,17 +1,30 @@
-import 'swiper/css';
-import 'swiper/css/navigation';
+import 'swiper/css'
+import 'swiper/css/navigation'
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
-import type { Swiper as SwiperInstance } from 'swiper';
-import { Autoplay, Keyboard, Navigation } from 'swiper/modules';
-import { Swiper, SwiperSlide } from 'swiper/react';
+import Image from 'next/image'
+import { useMemo, useRef, useState } from 'react'
+import type { Swiper as SwiperInstance } from 'swiper'
+import { Autoplay, Keyboard, Navigation } from 'swiper/modules'
+import { Swiper, SwiperSlide } from 'swiper/react'
 
-import type { NotionPage } from '@/lib/notion-page';
+import type { NotionPage } from '@/lib/notion-page'
 
-import styles from './NotionGalleryCarousel.module.css';
-import { NotionGalleryCarouselSkeleton } from './NotionGalleryCarouselSkeleton';
+import {
+  ArrowContainer,
+  ArrowLeft,
+  ArrowRight,
+  Category,
+  Container,
+  Dot,
+  DotActive,
+  ImageCoverOverlay,
+  Overlay,
+  OverlayContent,
+  Pagination,
+  Subtitle,
+  Title,
+} from './NotionGalleryCarousel.styles'
+import { NotionGalleryCarouselSkeleton } from './NotionGalleryCarouselSkeleton'
 
 export function NotionGalleryCarousel({
   pages,
@@ -39,7 +52,7 @@ export function NotionGalleryCarousel({
   }
 
   return (
-    <section className={styles.carouselContainer} aria-label="Notion 페이지 캐로셀">
+    <Container aria-label="Notion 페이지 캐로셀">
       <Swiper
         autoplay={{ delay: 5000 }}
         modules={[Navigation, Keyboard, Autoplay]}
@@ -60,79 +73,87 @@ export function NotionGalleryCarousel({
                   <Image
                     src={`${item.cover}`}
                     alt={item.title}
-                    className={styles.carouselImage}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', backgroundColor: '#222', zIndex: 0 }}
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.style.display = 'none'
                     }}
                     fill
                   />
-                  <div className={styles.imageCoverOverlay} />
+                  <ImageCoverOverlay />
                 </>
               ) : (
                 <div
-                  className={styles.carouselImage}
                   style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#999',
                     fontSize: 18,
+                    backgroundColor: '#222',
                   }}
                 >
                   이미지 없음
                 </div>
               )}
-              {/* 중앙 오버레이 (카테고리/타이틀/부제목) */}
-              <Link href={`/post/${item.id}`}>
-                <div className={styles.overlay}>
-                  <div className={styles.overlayContent}>
-                    {item.category && <div className={styles.category}>{item.category}</div>}
-                    <div className={styles.title}>{item.title}</div>
-                    {item.subtitle && <div className={styles.subtitle}>{item.subtitle}</div>}
-                  </div>
-                </div>
-              </Link>
+              <Overlay href={`/post/${item.id}`}>
+                <OverlayContent>
+                  {item.category && <Category>{item.category}</Category>}
+                  <Title>{item.title}</Title>
+                  {item.subtitle && <Subtitle>{item.subtitle}</Subtitle>}
+                </OverlayContent>
+              </Overlay>
             </div>
           </SwiperSlide>
         ))}
-        {/* 좌우 화살표 버튼 - 캐러셀 컨테이너에 고정 */}
-        <div className={styles.arrowContainer}>
-          <button
-            className={`${styles.arrowBtn} ${styles.arrowLeft}`}
-            aria-label="이전 슬라이드"
-            onClick={() => swiperRef.current?.slidePrev()}
-            tabIndex={0}
-            type="button"
-          >
-            <Image src="/carousel-left.png" alt="이전 슬라이드" width={64} height={64} />
-          </button>
-          <button
-            className={`${styles.arrowBtn} ${styles.arrowRight}`}
-            aria-label="다음 슬라이드"
-            onClick={() => swiperRef.current?.slideNext()}
-            tabIndex={0}
-            type="button"
-          >
-            <Image src="/carousel-right.png" alt="다음 슬라이드" width={64} height={64} />
-          </button>
-        </div>
       </Swiper>
-      {/* 페이지네이션 점 */}
-      <div className={styles.pagination}>
+      <ArrowContainer>
+        <ArrowLeft
+          aria-label="이전 슬라이드"
+          onClick={() => swiperRef.current?.slidePrev()}
+          tabIndex={0}
+          type="button"
+        >
+          <Image src="/carousel-left.png" alt="이전 슬라이드" width={64} height={64} />
+        </ArrowLeft>
+        <ArrowRight
+          aria-label="다음 슬라이드"
+          onClick={() => swiperRef.current?.slideNext()}
+          tabIndex={0}
+          type="button"
+        >
+          <Image src="/carousel-right.png" alt="다음 슬라이드" width={64} height={64} />
+        </ArrowRight>
+      </ArrowContainer>
+      <Pagination>
         {filteredItems.map((_, idx) => (
-          <div
-            key={idx}
-            className={idx === currentIndex ? `${styles.dot} ${styles.dotActive}` : styles.dot}
-            aria-label={`페이지 ${idx + 1}`}
-            tabIndex={-1}
-            role="button"
-            onClick={() => {
-              setCurrentIndex(idx);
-              swiperRef.current?.slideToLoop(idx);
-            }}
-          />
+          idx === currentIndex ? (
+            <DotActive
+              key={idx}
+              aria-label={`페이지 ${idx + 1}`}
+              tabIndex={-1}
+              role="button"
+              onClick={() => {
+                setCurrentIndex(idx)
+                swiperRef.current?.slideToLoop(idx)
+              }}
+            />
+          ) : (
+            <Dot
+              key={idx}
+              aria-label={`페이지 ${idx + 1}`}
+              tabIndex={-1}
+              role="button"
+              onClick={() => {
+                setCurrentIndex(idx)
+                swiperRef.current?.slideToLoop(idx)
+              }}
+            />
+          )
         ))}
-      </div>
-    </section>
-  );
+      </Pagination>
+    </Container>
+  )
 }

@@ -26,6 +26,7 @@ export default withBundleAnalyzer({
   },
 
   webpack: (config) => {
+    config.resolve.extensions = ['.ts', '.tsx', ...config.resolve.extensions];
     return config;
   },
 

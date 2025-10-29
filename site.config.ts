@@ -14,4 +14,5 @@ export default siteConfig({
   isRedisEnabled: false,
   pageUrlOverrides: null,
   navigationStyle: 'custom',
+  github: 'https://github.com/hjlee7856',
 });

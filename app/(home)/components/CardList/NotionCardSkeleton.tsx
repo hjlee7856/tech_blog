@@ -1,122 +1,64 @@
-import React from 'react';
+import { Body, Card, Category, Cover, Grid, Summary, Title } from './NotionCardList.styles';
 
-import styles from './NotionCardList.module.css';
+const SKELETON_COUNT = 10
 
-export function NotionCardSkeleton() {
-  const skeletonCount = 10;
+const SKELETON_GRADIENT = 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)'
+const SKELETON_STYLE = {
+  background: SKELETON_GRADIENT,
+  backgroundSize: '200% 100%',
+  animation: 'skeleton-loading 1.5s infinite linear',
+}
 
+function SkeletonPlaceholder({ width, height, borderRadius = '4px' }: { width: string | number; height: string | number; borderRadius?: string }) {
   return (
     <div
-      className={styles['notion-gallery-grid']}
+      style={{
+        width,
+        height,
+        borderRadius,
+        ...SKELETON_STYLE,
+      }}
+    />
+  )
+}
+
+export function NotionCardSkeleton() {
+  return (
+    <Grid
       aria-busy="true"
       aria-label="카드 리스트 로딩 중"
       role="status"
     >
-      {Array.from({ length: skeletonCount }).map((_, i) => (
-        <div
-          key={i}
-          className={styles['notion-collection-card']}
-          style={{ pointerEvents: 'none' }}
-          aria-hidden="true"
-        >
-          <div className={styles['notion-collection-card-cover']}>
+      {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+        <Card key={i} style={{ pointerEvents: 'none' }} aria-hidden="true">
+          <Cover>
             <div
               style={{
                 width: '100%',
                 aspectRatio: '16/10',
-                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'skeleton-loading 1.5s infinite linear',
+                ...SKELETON_STYLE,
               }}
             />
-          </div>
-          <div className={styles['notion-collection-card-body']}>
-            <div
-              className={styles['notion-collection-card-category']}
-              style={{
-                WebkitLineClamp: 1,
-                lineClamp: 1,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'inline-block',
-                  width: '80px',
-                  height: '24px',
-                  borderRadius: '16px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'skeleton-loading 1.5s infinite linear',
-                }}
-              />
-              <div
-                style={{
-                  color: '#e0e0e0',
-                  display: 'inline-block',
-                  margin: '0 0.5rem',
-                }}
-              >
-                |
-              </div>
-              <div
-                style={{
-                  display: 'inline-block',
-                  width: '70px',
-                  height: '20px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'skeleton-loading 1.5s infinite linear',
-                  verticalAlign: 'middle',
-                }}
-              />
+          </Cover>
+          <Body>
+            <Category style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <SkeletonPlaceholder width="80px" height="24px" borderRadius="16px" />
+              <span style={{ color: '#e0e0e0' }}>|</span>
+              <SkeletonPlaceholder width="70px" height="20px" />
+            </Category>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '1rem' }}>
+              <Title>
+                <SkeletonPlaceholder width="80%" height="24px" />
+              </Title>
+              <Summary>
+                <SkeletonPlaceholder width="95%" height="18px" />
+              </Summary>
+              <Summary>
+                <SkeletonPlaceholder width="60%" height="18px" />
+              </Summary>
             </div>
-            <div
-              style={{
-                paddingRight: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <div
-                className={styles['notion-collection-card-title']}
-                style={{
-                  width: '80%',
-                  height: '24px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'skeleton-loading 1.5s infinite linear',
-                }}
-              />
-              <div
-                className={styles['notion-collection-card-summary']}
-                style={{
-                  width: '95%',
-                  height: '18px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'skeleton-loading 1.5s infinite linear',
-                }}
-              />
-              <div
-                className={styles['notion-collection-card-summary']}
-                style={{
-                  width: '60%',
-                  height: '18px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'skeleton-loading 1.5s infinite linear',
-                }}
-              />
-            </div>
-          </div>
-        </div>
+          </Body>
+        </Card>
       ))}
       <style>{`
         @keyframes skeleton-loading {
@@ -124,6 +66,6 @@ export function NotionCardSkeleton() {
           100% { background-position: -200% 0; }
         }
       `}</style>
-    </div>
-  );
+    </Grid>
+  )
 }
