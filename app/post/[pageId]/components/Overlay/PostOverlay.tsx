@@ -1,13 +1,13 @@
-import { useRouter } from 'next/navigation';
-import React from 'react';
+import { useRouter } from 'next/navigation'
+import React from 'react'
 
-import styles from './PostOverlay.module.css';
+import { Overlay, Content, Category, Title, Subtitle } from './PostOverlay.styles'
 
 interface PostOverlayProps {
-  title: string;
-  subtitle?: string;
-  category?: string;
-  className?: string;
+  title: string
+  subtitle?: string
+  category?: string
+  className?: string
 }
 
 /**
@@ -16,36 +16,35 @@ interface PostOverlayProps {
  * - 배경은 투명/반투명, 내용은 세로 중앙 정렬
  */
 export function PostOverlay({ title, subtitle, category, className }: PostOverlayProps) {
-  const router = useRouter();
+  const router = useRouter()
 
   const handleCategoryClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
+    e.stopPropagation()
     if (category) {
-      void router.push(`/?category=${encodeURIComponent(category)}`);
+      void router.push(`/?category=${encodeURIComponent(category)}`)
     }
-  };
+  }
 
   return (
-    <div
-      className={[styles.postOverlay, className].filter(Boolean).join(' ')}
+    <Overlay
+      className={className}
       aria-modal="true"
       role="dialog"
     >
-      <div className={styles.postOverlayContent}>
+      <Content>
         {category && (
-          <button
+          <Category
             type="button"
-            className={styles.postOverlayCategory}
             onClick={handleCategoryClick}
             tabIndex={0}
             aria-label={`카테고리 ${category}로 이동`}
           >
             {category}
-          </button>
+          </Category>
         )}
-        <h1 className={styles.postOverlayTitle}>{title}</h1>
-        {subtitle && <h2 className={styles.postOverlaySubtitle}>{subtitle}</h2>}
-      </div>
-    </div>
-  );
+        <Title>{title}</Title>
+        {subtitle && <Subtitle>{subtitle}</Subtitle>}
+      </Content>
+    </Overlay>
+  )
 }

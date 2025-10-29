@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { FiArrowUp } from 'react-icons/fi'
 
-import styles from './FloatingScrollTopButton.module.css'
+import { ScrollTopButton } from './FloatingScrollTopButton.styles'
 
 export interface FloatingScrollTopButtonProps {
   threshold?: number // 스크롤 표시 임계값(px)
@@ -35,13 +35,13 @@ export function FloatingScrollTopButton({
   if (!isVisible) return null
 
   return (
-    <button
+    <ScrollTopButton
       type='button'
       aria-label='맨 위로 이동'
       onClick={handleClick}
-      className={`${styles.floatingScrollTopButton} ${className}`}
+      className={className}
     >
       <FiArrowUp size={24} color='#fff' aria-hidden />
-    </button>
+    </ScrollTopButton>
   )
 }

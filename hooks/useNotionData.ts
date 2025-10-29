@@ -9,7 +9,7 @@ import { getSearchedNotionPages } from '../server/get-search-notion-pages';
 interface UseNotionDataProps {
   initialPages: NotionPage[];
   initialTotal: number;
-  initialCategories: { category: string; order: number }[];
+  initialCategories: { category: string; order: number; count: number }[];
   pageSize: number;
 }
 

@@ -1,25 +1,25 @@
-import Image from 'next/image';
+import Image from 'next/image'
 
-import styles from './NotionFooterCard.module.css';
+import { Root, ImageWrapper, Overlay } from './NotionFooterCard.styles'
 
 export interface NotionFooterCardProps {
-  className?: string;
+  className?: string
 }
 
 export function NotionFooterCard({ className }: NotionFooterCardProps) {
   return (
-    <div className={`${styles.root} ${className ?? ''}`} aria-label="데일리언 푸터 배너">
-      <div className={styles.imageWrapper}>
+    <Root className={className} aria-label="데일리언 푸터 배너">
+      <ImageWrapper>
         <Image
           src="/post-footer.png"
           alt="데일리언 푸터 배경"
           fill
-          className={styles.image}
+          style={{ objectFit: 'cover' }}
           priority
           sizes="(max-width: 600px) 100vw, 900px"
         />
-        <div className={styles.overlay} aria-hidden="true" />
-      </div>
-    </div>
-  );
+        <Overlay aria-hidden="true" />
+      </ImageWrapper>
+    </Root>
+  )
 }

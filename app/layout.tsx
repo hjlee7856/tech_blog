@@ -8,9 +8,11 @@ import '../styles/prism-theme.css';
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" style={{ height: '100%' }}>
       <head />
-      <body>{children}</body>
+      <body style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </body>
     </html>
   );
 }

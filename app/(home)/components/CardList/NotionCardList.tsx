@@ -1,10 +1,9 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import React from 'react';
 
 import type { NotionPage } from '@/lib/notion-page';
 
-import styles from './NotionCardList.module.css';
+import { Body, Card, Category, Cover, CoverPlaceholder, Grid, Summary, Title } from './NotionCardList.styles';
 
 interface NotionCardListProps {
   pages: NotionPage[];
@@ -29,16 +28,15 @@ function highlight(text: string, keyword: string) {
 
 export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
   return (
-    <div className={styles['notion-gallery-grid']}>
+    <Grid>
       {pages.map((page) => (
-        <Link
+        <Card
           key={page.id}
           href={`/post/${page.id}`}
-          className={styles['notion-collection-card']}
           tabIndex={0}
           aria-label={page.title}
         >
-          <div className={styles['notion-collection-card-cover']}>
+          <Cover>
             {page.cover ? (
               <div
                 style={{
@@ -58,13 +56,12 @@ export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
                 />
               </div>
             ) : (
-              <div className={styles['notion-collection-card-cover-placeholder']} />
+              <CoverPlaceholder />
             )}
-          </div>
-          <div className={styles['notion-collection-card-body']}>
+          </Cover>
+          <Body>
             {page.category && page.created_date && (
-              <div
-                className={styles['notion-collection-card-category']}
+              <Category
                 style={{
                   WebkitLineClamp: 1,
                   lineClamp: 1,
@@ -99,7 +96,7 @@ export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
                 >
                   {page.created_date}
                 </div>
-              </div>
+              </Category>
             )}
             <div
               style={{
@@ -109,18 +106,18 @@ export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
                 gap: '0.5rem',
               }}
             >
-              <div className={styles['notion-collection-card-title']}>
+              <Title>
                 {highlight(page.title, inputValue)}
-              </div>
+              </Title>
               {page.description && (
-                <div className={styles['notion-collection-card-summary']}>
+                <Summary>
                   {highlight(page.description, inputValue)}
-                </div>
+                </Summary>
               )}
             </div>
-          </div>
-        </Link>
+          </Body>
+        </Card>
       ))}
-    </div>
-  );
+    </Grid>
+  )
 }
