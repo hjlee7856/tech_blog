@@ -1,16 +1,16 @@
-import { styled } from '@/styled-system/jsx'
+import { styled } from '@/styled-system/jsx';
 
 export const Grid = styled('div', {
   base: {
     width: '100%',
     display: 'grid',
-    gridTemplateColumns: { pc: 'repeat(2, 1fr)', tablet: 'repeat(1, 1fr)' },
+    gridTemplateColumns: { pc: 'repeat(2, 1fr)', pcDown: 'repeat(1, 1fr)' },
     gap: '2rem',
     alignItems: 'stretch',
     justifyItems: 'center',
-    padding: { pc: '0', tablet: '0 20px' },
+    padding: { pc: '0', pcDown: '0 20px' },
   },
-})
+});
 
 export const Card = styled('a', {
   base: {
@@ -37,7 +37,7 @@ export const Card = styled('a', {
       transform: 'translateY(-4px) scale(1.025)',
     },
   },
-})
+});
 
 export const Cover = styled('div', {
   base: {
@@ -48,7 +48,7 @@ export const Cover = styled('div', {
     alignItems: 'center',
     justifyContent: 'center',
   },
-})
+});
 
 export const CoverPlaceholder = styled('div', {
   base: {
@@ -61,7 +61,7 @@ export const CoverPlaceholder = styled('div', {
     objectFit: 'cover',
     backgroundColor: '#e0e0e0',
   },
-})
+});
 
 export const Body = styled('div', {
   base: {
@@ -71,7 +71,7 @@ export const Body = styled('div', {
     flexDirection: 'column',
     gap: '0.6rem',
   },
-})
+});
 
 export const Category = styled('div', {
   base: {
@@ -82,7 +82,7 @@ export const Category = styled('div', {
     fontWeight: 500,
     overflow: 'hidden',
   },
-})
+});
 
 export const Title = styled('div', {
   base: {
@@ -91,7 +91,7 @@ export const Title = styled('div', {
     lineHeight: 1.3,
     overflow: 'hidden',
   },
-})
+});
 
 export const Summary = styled('div', {
   base: {
@@ -100,4 +100,4 @@ export const Summary = styled('div', {
     lineHeight: 1.5,
     overflow: 'hidden',
   },
-})
+});

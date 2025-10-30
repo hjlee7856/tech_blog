@@ -26,7 +26,7 @@ export const MainContent = styled('div', {
 
 export const Main = styled('div', {
   base: {
-    paddingInline: { pc: '24px', tablet: '0px' },
+    paddingInline: { pc: '24px', pcDown: '0px' },
     width: '100%',
     overflow: 'hidden',
     display: 'flex',
@@ -39,7 +39,7 @@ export const Main = styled('div', {
 export const Content = styled('div', {
   base: {
     width: '100%',
-    padding: { pc: '24px', tablet: '0px' },
+    padding: { pc: '24px', pcDown: '0px' },
     flex: 1,
     maxWidth: '1200px',
   },
@@ -48,11 +48,11 @@ export const Content = styled('div', {
 export const CategorySection = styled('section', {
   base: {
     display: 'flex',
-    flexDirection: { pc: 'row', mobile: 'column' },
+    flexDirection: { pc: 'row', pcDown: 'column' },
     justifyContent: 'center',
     alignItems: 'center',
     gap: '16px',
-    marginTop: { pc: '0', mobile: '8px' },
-    marginBottom: { pc: '0', mobile: '16px' },
+    marginTop: { pc: '0', pcDown: '8px' },
+    marginBottom: { pc: '0', pcDown: '16px' },
   },
 });

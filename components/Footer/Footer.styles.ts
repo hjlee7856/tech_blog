@@ -19,21 +19,21 @@ export const FooterContent = styled('div', {
     width: '100%',
     maxWidth: '900px',
     display: 'flex',
-    flexDirection: { pc: 'row', tabletDown: 'column' },
+    flexDirection: { pc: 'row', pcDown: 'column' },
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 0,
-    gap: { pc: '0', tabletDown: '6px' },
+    gap: { pc: '0', pcDown: '6px' },
   },
 });
 
 export const CopyrightSection = styled('div', {
   base: {
-    fontSize: { pc: '100%', tabletDown: '80%' },
+    fontSize: { pc: '100%', pcDown: '80%' },
     textAlign: 'center',
     color: '#868b94',
-    order: { pc: 'auto', mobileDown: 3 },
-    marginTop: { pc: '0', mobileDown: '1em' },
+    order: { pc: 'auto', pcDown: 3 },
+    marginTop: { pc: '0', pcDown: '1em' },
     '& p': {
       margin: '4px',
     },

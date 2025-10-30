@@ -1,10 +1,10 @@
-import { styled } from '@/styled-system/jsx'
+import { styled } from '@/styled-system/jsx';
 
 export const ScrollTopButton = styled('button', {
   base: {
     position: 'fixed',
-    right: { pc: '3rem', tablet: '1rem' },
-    bottom: { pc: '3rem', tablet: '1rem' },
+    right: { pc: '3rem', pcDown: '1rem' },
+    bottom: { pc: '3rem', pcDown: '1rem' },
     zIndex: 50,
     display: 'flex',
     alignItems: 'center',
@@ -24,4 +24,4 @@ export const ScrollTopButton = styled('button', {
       opacity: 0.8,
     },
   },
-})
+});

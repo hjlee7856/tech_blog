@@ -1695,14 +1695,6 @@ const tokens = {
     "value": "1024px",
     "variable": "var(--sizes-breakpoint-pc)"
   },
-  "sizes.breakpoint-tablet": {
-    "value": "768px",
-    "variable": "var(--sizes-breakpoint-tablet)"
-  },
-  "sizes.breakpoint-mobile": {
-    "value": "567px",
-    "variable": "var(--sizes-breakpoint-mobile)"
-  },
   "animations.spin": {
     "value": "spin 1s linear infinite",
     "variable": "var(--animations-spin)"
@@ -1742,14 +1734,6 @@ const tokens = {
   "breakpoints.pc": {
     "value": "1024px",
     "variable": "var(--breakpoints-pc)"
-  },
-  "breakpoints.tablet": {
-    "value": "768px",
-    "variable": "var(--breakpoints-tablet)"
-  },
-  "breakpoints.mobile": {
-    "value": "567px",
-    "variable": "var(--breakpoints-mobile)"
   },
   "spacing.-1": {
     "value": "calc(var(--spacing-1) * -1)",

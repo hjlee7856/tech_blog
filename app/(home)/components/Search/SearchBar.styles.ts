@@ -7,11 +7,11 @@ export const Container = styled('div', {
     display: 'flex',
     alignItems: 'center',
     marginBottom: '24px',
-    flexDirection: { pc: 'row', tablet: 'column' },
-    justifyContent: { pc: 'flex-start', tablet: 'center' },
-    gap: { pc: '0', tablet: '16px' },
-    padding: { pc: '0', tablet: '0 16px' },
-    marginTop: { pc: '0', tablet: '24px' },
+    flexDirection: { pc: 'row', pcDown: 'column' },
+    justifyContent: { pc: 'flex-start', pcDown: 'center' },
+    gap: { pc: '0', pcDown: '16px' },
+    padding: { pc: '0', pcDown: '0 16px' },
+    marginTop: { pc: '0', pcDown: '24px' },
   },
 });
 
