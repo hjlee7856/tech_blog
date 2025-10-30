@@ -4,13 +4,7 @@ export const Container = styled('section', {
   base: {
     position: 'relative',
     width: '100%',
-    height: '75vh',
-    '@media (max-width: 900px)': {
-      height: '580px',
-    },
-    '@media (max-width: 768px)': {
-      height: '450px',
-    },
+    height: { pc: '75vh', tablet: '450px' },
   },
 });
 
@@ -43,86 +37,61 @@ export const ImageCoverOverlay = styled('div', {
 
 export const Overlay = styled('a', {
   base: {
-    padding: '0 80px',
+    padding: { pc: '0 80px', tablet: '0 26px' },
     width: '100%',
-    height: '33%',
+    height: { pc: '33%', tablet: '50%' },
     position: 'absolute',
-    top: '33%',
+    top: { pc: '33%', tablet: '30%' },
     left: 0,
     right: 0,
     bottom: 0,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
+    alignItems: { pc: 'center', tablet: 'flex-start' },
     justifyContent: 'center',
     zIndex: 100,
     color: '#fff',
     textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
     cursor: 'pointer',
     textDecoration: 'none',
-    '@media (max-width: 768px)': {
-      paddingLeft: '26px',
-      paddingRight: '26px',
-      height: '50%',
-      top: '30%',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-    },
   },
 });
 
 export const OverlayContent = styled('div', {
   base: {
-    width: '70%',
+    width: { pc: '70%', tablet: '90%' },
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    '@media (max-width: 768px)': {
-      width: '90%',
-      alignItems: 'flex-start',
-      justifyContent: 'flex-start',
-      textAlign: 'left',
-    },
+    alignItems: { pc: 'center', tablet: 'flex-start' },
+    justifyContent: { pc: 'center', tablet: 'flex-start' },
+    textAlign: { pc: 'center', tablet: 'left' },
   },
 });
 
 export const Category = styled('div', {
   base: {
     color: '#fff',
-    fontSize: '1.1rem',
+    fontSize: { pc: '1.1rem', tablet: '0.8rem' },
     fontWeight: 600,
-    marginBottom: '30px',
+    marginBottom: { pc: '30px', tablet: '10px' },
     letterSpacing: '0.08em',
     opacity: 0.85,
     borderRadius: '22px',
     border: '1px solid white',
-    padding: '8px 24px',
-    '@media (max-width: 768px)': {
-      fontSize: '0.8rem',
-      marginBottom: '10px',
-      padding: '4px 14px',
-    },
+    padding: { pc: '8px 24px', tablet: '4px 14px' },
   },
 });
 
 export const Title = styled('div', {
   base: {
     color: '#fff',
-    maxWidth: '70%',
-    fontSize: '2.5rem',
+    maxWidth: { pc: '70%', tablet: '90%' },
+    fontSize: { pc: '2.5rem', tablet: '1.8rem' },
     fontWeight: 700,
-    marginBottom: '22px',
-    textAlign: 'center',
+    marginBottom: { pc: '22px', tablet: '10px' },
+    textAlign: { pc: 'center', tablet: 'left' },
     whiteSpace: 'normal',
     wordBreak: 'keep-all',
-    '@media (max-width: 768px)': {
-      maxWidth: '90%',
-      fontSize: '1.8rem',
-      marginBottom: '10px',
-      textAlign: 'left',
-    },
   },
 });
 
@@ -131,17 +100,13 @@ export const Subtitle = styled('div', {
     color: '#fff',
     width: '100%',
     minHeight: '60px',
-    fontSize: '1.2rem',
+    fontSize: { pc: '1.2rem', tablet: '1rem' },
     fontWeight: 400,
-    textAlign: 'center',
+    textAlign: { pc: 'center', tablet: 'left' },
     opacity: 0.92,
-    '@media (max-width: 768px)': {
-      fontSize: '1rem',
-      textAlign: 'left',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'normal',
-    },
+    overflow: { pc: 'visible', tablet: 'hidden' },
+    textOverflow: { pc: 'clip', tablet: 'ellipsis' },
+    whiteSpace: 'normal',
   },
 });
 
@@ -229,7 +194,7 @@ export const ArrowLeft = styled('button', {
     borderRadius: '50%',
     color: '#fff',
     fontSize: '2rem',
-    display: 'flex',
+    display: { pc: 'flex', tablet: 'none' },
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,
@@ -238,9 +203,6 @@ export const ArrowLeft = styled('button', {
     transition: 'opacity 0.2s',
     transform: 'translateY(-50%)',
     pointerEvents: 'auto',
-    '@media (max-width: 768px)': {
-      display: 'none',
-    },
   },
 });
 
@@ -256,7 +218,7 @@ export const ArrowRight = styled('button', {
     borderRadius: '50%',
     color: '#fff',
     fontSize: '2rem',
-    display: 'flex',
+    display: { pc: 'flex', tablet: 'none' },
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,
@@ -265,8 +227,5 @@ export const ArrowRight = styled('button', {
     transition: 'opacity 0.2s',
     transform: 'translateY(-50%)',
     pointerEvents: 'auto',
-    '@media (max-width: 768px)': {
-      display: 'none',
-    },
   },
 });

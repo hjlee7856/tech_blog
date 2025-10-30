@@ -2,7 +2,7 @@ import { styled } from '@/styled-system/jsx';
 
 export const HeaderContainer = styled('header', {
   base: {
-    display: 'none',
+    display: { pc: 'none', tablet: 'flex' },
     width: '100%',
     height: '56px',
     backgroundColor: '#1f2937',
@@ -13,11 +13,8 @@ export const HeaderContainer = styled('header', {
     position: 'sticky',
     top: 0,
     zIndex: 50,
-    '@media (max-width: 1024px)': {
-      display: 'flex',
-      alignItems: 'center',
-      paddingInline: '12px',
-    },
+    alignItems: { pc: 'auto', tablet: 'center' },
+    paddingInline: { pc: '0', tablet: '12px' },
   },
 });
 

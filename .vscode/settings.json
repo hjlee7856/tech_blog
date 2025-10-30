@@ -45,7 +45,6 @@
   "editor.cursorBlinking": "smooth",
   "editor.cursorSmoothCaretAnimation": "on",
   "editor.smoothScrolling": true,
-  "editor.multiCursorModifier": "ctrlCmd",
 
   // ===== 파일 관리 =====
   "files.autoSave": "onFocusChange",

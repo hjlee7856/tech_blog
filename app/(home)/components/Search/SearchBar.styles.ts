@@ -7,13 +7,11 @@ export const Container = styled('div', {
     display: 'flex',
     alignItems: 'center',
     marginBottom: '24px',
-    '@media (max-width: 768px)': {
-      marginTop: '24px',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      gap: '16px',
-      padding: '0 16px',
-    },
+    flexDirection: { pc: 'row', tablet: 'column' },
+    justifyContent: { pc: 'flex-start', tablet: 'center' },
+    gap: { pc: '0', tablet: '16px' },
+    padding: { pc: '0', tablet: '0 16px' },
+    marginTop: { pc: '0', tablet: '24px' },
   },
 });
 
@@ -26,9 +24,6 @@ export const InputContainer = styled('div', {
     borderRadius: '9999px',
     backgroundColor: '#f8fafc',
     transition: 'border-color 0.2s, background 0.2s',
-    '@media (max-width: 768px)': {
-      width: '100%',
-    },
   },
 });
 

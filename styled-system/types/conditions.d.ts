@@ -216,6 +216,12 @@ export interface Conditions {
 	"_noscript": string
 	/** `@media (inverted-colors: inverted)` */
 	"_invertedColors": string
+	/** `@media screen and (min-width: 35.4375rem)` */
+	"mobile": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 39.9975rem)` */
+	"mobileOnly": string
+	/** `@media screen and (max-width: 35.435rem)` */
+	"mobileDown": string
 	/** `@media screen and (min-width: 40rem)` */
 	"sm": string
 	/** `@media screen and (min-width: 40rem) and (max-width: 47.9975rem)` */
@@ -224,16 +230,28 @@ export interface Conditions {
 	"smDown": string
 	/** `@media screen and (min-width: 48rem)` */
 	"md": string
-	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
+	/** `@media screen and (min-width: 48rem) and (max-width: 47.9975rem)` */
 	"mdOnly": string
 	/** `@media screen and (max-width: 47.9975rem)` */
 	"mdDown": string
+	/** `@media screen and (min-width: 48rem)` */
+	"tablet": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
+	"tabletOnly": string
+	/** `@media screen and (max-width: 47.9975rem)` */
+	"tabletDown": string
 	/** `@media screen and (min-width: 64rem)` */
 	"lg": string
-	/** `@media screen and (min-width: 64rem) and (max-width: 79.9975rem)` */
+	/** `@media screen and (min-width: 64rem) and (max-width: 63.9975rem)` */
 	"lgOnly": string
 	/** `@media screen and (max-width: 63.9975rem)` */
 	"lgDown": string
+	/** `@media screen and (min-width: 64rem)` */
+	"pc": string
+	/** `@media screen and (min-width: 64rem) and (max-width: 79.9975rem)` */
+	"pcOnly": string
+	/** `@media screen and (max-width: 63.9975rem)` */
+	"pcDown": string
 	/** `@media screen and (min-width: 80rem)` */
 	"xl": string
 	/** `@media screen and (min-width: 80rem) and (max-width: 95.9975rem)` */
@@ -246,24 +264,60 @@ export interface Conditions {
 	"2xlOnly": string
 	/** `@media screen and (max-width: 95.9975rem)` */
 	"2xlDown": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 39.9975rem)` */
+	"mobileToSm": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 47.9975rem)` */
+	"mobileToMd": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 47.9975rem)` */
+	"mobileToTablet": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 63.9975rem)` */
+	"mobileToLg": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 63.9975rem)` */
+	"mobileToPc": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 79.9975rem)` */
+	"mobileToXl": string
+	/** `@media screen and (min-width: 35.4375rem) and (max-width: 95.9975rem)` */
+	"mobileTo2xl": string
 	/** `@media screen and (min-width: 40rem) and (max-width: 47.9975rem)` */
 	"smToMd": string
+	/** `@media screen and (min-width: 40rem) and (max-width: 47.9975rem)` */
+	"smToTablet": string
 	/** `@media screen and (min-width: 40rem) and (max-width: 63.9975rem)` */
 	"smToLg": string
+	/** `@media screen and (min-width: 40rem) and (max-width: 63.9975rem)` */
+	"smToPc": string
 	/** `@media screen and (min-width: 40rem) and (max-width: 79.9975rem)` */
 	"smToXl": string
 	/** `@media screen and (min-width: 40rem) and (max-width: 95.9975rem)` */
 	"smTo2xl": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 47.9975rem)` */
+	"mdToTablet": string
 	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
 	"mdToLg": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
+	"mdToPc": string
 	/** `@media screen and (min-width: 48rem) and (max-width: 79.9975rem)` */
 	"mdToXl": string
 	/** `@media screen and (min-width: 48rem) and (max-width: 95.9975rem)` */
 	"mdTo2xl": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
+	"tabletToLg": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 63.9975rem)` */
+	"tabletToPc": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 79.9975rem)` */
+	"tabletToXl": string
+	/** `@media screen and (min-width: 48rem) and (max-width: 95.9975rem)` */
+	"tabletTo2xl": string
+	/** `@media screen and (min-width: 64rem) and (max-width: 63.9975rem)` */
+	"lgToPc": string
 	/** `@media screen and (min-width: 64rem) and (max-width: 79.9975rem)` */
 	"lgToXl": string
 	/** `@media screen and (min-width: 64rem) and (max-width: 95.9975rem)` */
 	"lgTo2xl": string
+	/** `@media screen and (min-width: 64rem) and (max-width: 79.9975rem)` */
+	"pcToXl": string
+	/** `@media screen and (min-width: 64rem) and (max-width: 95.9975rem)` */
+	"pcTo2xl": string
 	/** `@media screen and (min-width: 80rem) and (max-width: 95.9975rem)` */
 	"xlTo2xl": string
 	/** `@container  (min-width: 20rem)` */

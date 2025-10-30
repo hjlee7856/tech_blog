@@ -1,21 +1,21 @@
-import * as React from 'react';
+import * as React from 'react'
 
-import styles from '@/styles/styles.module.css';
+import { CopyrightSection, FooterContent, FooterWrapper } from './Footer.styles'
 
 // TODO: merge the data and icons from PageSocial with the social links in Footer
 
-export function FooterImpl() {
-  const currentYear = new Date().getFullYear();
+function FooterImpl() {
+  const currentYear = new Date().getFullYear()
 
   return (
-    <footer className={styles.footer}>
-      <div className={styles.footerContent}>
-        <div className={styles.copyright}>
+    <FooterWrapper>
+      <FooterContent>
+        <CopyrightSection>
           <p>© {currentYear} HJ All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
-  );
+        </CopyrightSection>
+      </FooterContent>
+    </FooterWrapper>
+  )
 }
 
-export const Footer = React.memo(FooterImpl);
+export const Footer = React.memo(FooterImpl)

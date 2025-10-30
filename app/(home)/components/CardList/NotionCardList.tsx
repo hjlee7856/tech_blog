@@ -7,7 +7,7 @@ import { Body, Card, Category, Cover, CoverPlaceholder, Grid, Summary, Title } f
 
 interface NotionCardListProps {
   pages: NotionPage[];
-  inputValue: string;
+  searchTerm: string;
 }
 
 function highlight(text: string, keyword: string) {
@@ -26,7 +26,7 @@ function highlight(text: string, keyword: string) {
   );
 }
 
-export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
+export function NotionCardList({ pages, searchTerm }: NotionCardListProps) {
   return (
     <Grid>
       {pages.map((page) => (
@@ -107,11 +107,11 @@ export function NotionCardList({ pages, inputValue }: NotionCardListProps) {
               }}
             >
               <Title>
-                {highlight(page.title, inputValue)}
+                {highlight(page.title, searchTerm)}
               </Title>
               {page.description && (
                 <Summary>
-                  {highlight(page.description, inputValue)}
+                  {highlight(page.description, searchTerm)}
                 </Summary>
               )}
             </div>

@@ -3,8 +3,8 @@ import { styled } from '@/styled-system/jsx'
 export const ScrollTopButton = styled('button', {
   base: {
     position: 'fixed',
-    right: '3rem',
-    bottom: '3rem',
+    right: { pc: '3rem', tablet: '1rem' },
+    bottom: { pc: '3rem', tablet: '1rem' },
     zIndex: 50,
     display: 'flex',
     alignItems: 'center',
@@ -22,10 +22,6 @@ export const ScrollTopButton = styled('button', {
     transition: 'opacity 0.2s ease',
     _hover: {
       opacity: 0.8,
-    },
-    '@media (max-width: 768px)': {
-      right: '1rem',
-      bottom: '1rem',
     },
   },
 })

@@ -1,4 +1,5 @@
 import { type Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { getNotionCategories } from '../../server/get-notion-categories';
 import { getNotionPages } from '../../server/get-notion-pages';
@@ -38,5 +39,9 @@ export default async function NotionDomainPage() {
   const { data, total } = await getNotionPages(false, 1, 10);
   const categoriesData = await getNotionCategories();
 
-  return <NotionDomainPageClient pages={data} total={total} categories={categoriesData} />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NotionDomainPageClient pages={data} total={total} categories={categoriesData} />
+    </Suspense>
+  );
 }

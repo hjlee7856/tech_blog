@@ -16,7 +16,13 @@ export default defineConfig({
 
   // Useful for theme customization
   theme: {
-    extend: {},
+    extend: {
+      breakpoints: {
+        pc: '1024px',
+        tablet: '768px',
+        mobile: '567px',
+      },
+    },
   },
 
   // The output directory for your css system
