@@ -12,12 +12,12 @@ interface ProfileSidebarProps {
   githubUrl?: string
   categories?: { category: string; order: number; count: number }[]
   activeCategory?: string
-  onCategoryChange?: (category: string) => Promise<void>
+  onCategoryChange?: (category: string) => void
   isOpen?: boolean
 }
 
 export function ProfileSidebar({
-  profileImage = '/profile.jpg',
+  profileImage,
   name,
   email,
   bio,
@@ -32,10 +32,9 @@ export function ProfileSidebar({
       {isOpen && <SidebarOverlay />}
       <Sidebar isOpen={isOpen}>
       <div style={{ position: 'relative', width: '100px', height: '100px' }}>
-        <ProfileImage src={profileImage} alt={name} onError={(e) => {
-          e.currentTarget.style.display = 'none';
-          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-        }} />
+        {profileImage && (
+          <ProfileImage src={profileImage} alt={name}  />
+        )}
         <svg
           className="hidden"
           width="100"
@@ -72,7 +71,7 @@ export function ProfileSidebar({
             <NotionCategoryFilter
               activeCategory={activeCategory}
               categories={categories}
-              onCategoryChange={onCategoryChange || (async () => {})}
+              onCategoryChange={onCategoryChange || (() => {})}
             />
           </CategoryList>
         </>

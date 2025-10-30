@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { FloatingScrollTopButton } from '@/components/Button/Floating/FloatingScrollTopButton'
 import { Footer } from '@/components/Footer/Footer'
@@ -29,6 +29,7 @@ export function NotionDomainPageClient({
 }: NotionDomainPageClientProps) {
   const [inputValue, setInputValue] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pageSize = 10;
 
   const {
@@ -38,6 +39,7 @@ export function NotionDomainPageClient({
     currentPage,
     totalPages,
     activeCategory,
+    searchTerm,
     setCurrentPage,
     handleCategoryChange,
     handleSearch,
@@ -51,7 +53,16 @@ export function NotionDomainPageClient({
   const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       handleSearch(inputValue);
+    }
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    if (newValue === '') {
+      handleSearch('');
     }
   };
 
@@ -63,14 +74,10 @@ export function NotionDomainPageClient({
           name="HJ"
           email="jacker97@naver.com"
           bio="프론트엔드 개발자"
-          profileImage="/profile.jpg"
           githubUrl="https://github.com/hjlee7856"
           categories={categories}
           activeCategory={activeCategory}
-          onCategoryChange={async (category: string) => {
-            setInputValue('');
-            handleCategoryChange(category);
-          }}
+          onCategoryChange={handleCategoryChange}
           isOpen={isSidebarOpen}
         />
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 100 }} />}
@@ -84,14 +91,9 @@ export function NotionDomainPageClient({
             <Content>
                 <SearchBar
                   value={inputValue}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const newValue = e.target.value;
-                    setInputValue(newValue);
-                    if (newValue === '') {
-                      handleSearch('');
-                    }
-                  }}
+                  onChange={handleSearchInputChange}
                   onSearch={() => {
+                    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
                     handleSearch(inputValue);
                   }}
                   onKeyDown={handleSearchInputKeyDown}
@@ -119,7 +121,7 @@ export function NotionDomainPageClient({
                     )
                   }
 
-                  if (inputValue.length > 0 && items.length === 0) {
+                  if (searchTerm.length > 0 && items.length === 0) {
                     return (
                       <div
                         style={{
@@ -139,7 +141,7 @@ export function NotionDomainPageClient({
 
                   return (
                     <>
-                      <NotionCardList pages={items} inputValue={inputValue} />
+                      <NotionCardList pages={items} searchTerm={searchTerm} />
                       <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}

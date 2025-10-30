@@ -4,14 +4,11 @@ export const Grid = styled('div', {
   base: {
     width: '100%',
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: { pc: 'repeat(2, 1fr)', tablet: 'repeat(1, 1fr)' },
     gap: '2rem',
     alignItems: 'stretch',
     justifyItems: 'center',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: 'repeat(1, 1fr)',
-      padding: '0 20px',
-    },
+    padding: { pc: '0', tablet: '0 20px' },
   },
 })
 

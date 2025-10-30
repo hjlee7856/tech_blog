@@ -2,7 +2,7 @@ import { CategoryFilterSkeleton } from './CategoryFilterSkeleton'
 import { Container, Button, ActiveButton } from './NotionCategoryFilter.styles'
 
 interface NotionCategoryFilterProps {
-  onCategoryChange: (category: string) => Promise<void>
+  onCategoryChange: (category: string) => void
   activeCategory: string
   categories: { category: string; order: number; count: number }[]
 }
