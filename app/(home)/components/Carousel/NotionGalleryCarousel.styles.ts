@@ -4,7 +4,7 @@ export const Container = styled('section', {
   base: {
     position: 'relative',
     width: '100%',
-    height: { pc: '75vh', tablet: '450px' },
+    height: { pc: '75vh', pcDown: '450px' },
   },
 });
 
@@ -37,17 +37,17 @@ export const ImageCoverOverlay = styled('div', {
 
 export const Overlay = styled('a', {
   base: {
-    padding: { pc: '0 80px', tablet: '0 26px' },
+    padding: { pc: '0 80px', pcDown: '0 26px' },
     width: '100%',
-    height: { pc: '33%', tablet: '50%' },
+    height: { pc: '33%', pcDown: '50%' },
     position: 'absolute',
-    top: { pc: '33%', tablet: '30%' },
+    top: { pc: '33%', pcDown: '30%' },
     left: 0,
     right: 0,
     bottom: 0,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: { pc: 'center', tablet: 'flex-start' },
+    alignItems: { pc: 'center', pcDown: 'flex-start' },
     justifyContent: 'center',
     zIndex: 100,
     color: '#fff',
@@ -59,37 +59,37 @@ export const Overlay = styled('a', {
 
 export const OverlayContent = styled('div', {
   base: {
-    width: { pc: '70%', tablet: '90%' },
+    width: { pc: '70%', pcDown: '90%' },
     display: 'flex',
     flexDirection: 'column',
-    alignItems: { pc: 'center', tablet: 'flex-start' },
-    justifyContent: { pc: 'center', tablet: 'flex-start' },
-    textAlign: { pc: 'center', tablet: 'left' },
+    alignItems: { pc: 'center', pcDown: 'flex-start' },
+    justifyContent: { pc: 'center', pcDown: 'flex-start' },
+    textAlign: { pc: 'center', pcDown: 'left' },
   },
 });
 
 export const Category = styled('div', {
   base: {
     color: '#fff',
-    fontSize: { pc: '1.1rem', tablet: '0.8rem' },
+    fontSize: { pc: '1.1rem', pcDown: '0.8rem' },
     fontWeight: 600,
-    marginBottom: { pc: '30px', tablet: '10px' },
+    marginBottom: { pc: '30px', pcDown: '10px' },
     letterSpacing: '0.08em',
     opacity: 0.85,
     borderRadius: '22px',
     border: '1px solid white',
-    padding: { pc: '8px 24px', tablet: '4px 14px' },
+    padding: { pc: '8px 24px', pcDown: '4px 14px' },
   },
 });
 
 export const Title = styled('div', {
   base: {
     color: '#fff',
-    maxWidth: { pc: '70%', tablet: '90%' },
-    fontSize: { pc: '2.5rem', tablet: '1.8rem' },
+    maxWidth: { pc: '70%', pcDown: '90%' },
+    fontSize: { pc: '2.5rem', pcDown: '1.8rem' },
     fontWeight: 700,
-    marginBottom: { pc: '22px', tablet: '10px' },
-    textAlign: { pc: 'center', tablet: 'left' },
+    marginBottom: { pc: '22px', pcDown: '10px' },
+    textAlign: { pc: 'center', pcDown: 'left' },
     whiteSpace: 'normal',
     wordBreak: 'keep-all',
   },
@@ -100,12 +100,12 @@ export const Subtitle = styled('div', {
     color: '#fff',
     width: '100%',
     minHeight: '60px',
-    fontSize: { pc: '1.2rem', tablet: '1rem' },
+    fontSize: { pc: '1.2rem', pcDown: '1rem' },
     fontWeight: 400,
-    textAlign: { pc: 'center', tablet: 'left' },
+    textAlign: { pc: 'center', pcDown: 'left' },
     opacity: 0.92,
-    overflow: { pc: 'visible', tablet: 'hidden' },
-    textOverflow: { pc: 'clip', tablet: 'ellipsis' },
+    overflow: { pc: 'visible', pcDown: 'hidden' },
+    textOverflow: { pc: 'clip', pcDown: 'ellipsis' },
     whiteSpace: 'normal',
   },
 });
@@ -194,7 +194,7 @@ export const ArrowLeft = styled('button', {
     borderRadius: '50%',
     color: '#fff',
     fontSize: '2rem',
-    display: { pc: 'flex', tablet: 'none' },
+    display: { pc: 'flex', pcDown: 'none' },
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,
@@ -218,7 +218,7 @@ export const ArrowRight = styled('button', {
     borderRadius: '50%',
     color: '#fff',
     fontSize: '2rem',
-    display: { pc: 'flex', tablet: 'none' },
+    display: { pc: 'flex', pcDown: 'none' },
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,

@@ -19,8 +19,6 @@ export default defineConfig({
     extend: {
       breakpoints: {
         pc: '1024px',
-        tablet: '768px',
-        mobile: '567px',
       },
     },
   },
