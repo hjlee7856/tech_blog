@@ -11,7 +11,7 @@ export const Sidebar = styled('aside', {
     backgroundColor: '#f9fafb',
     border: { pc: '1px solid #e5e7eb', tablet: 'none' },
     boxShadow: { pc: '0px 2px 8px rgba(0, 0, 0, 0.08)', tablet: 'none' },
-    height: { pc: 'fit-content', tablet: '100vh' },
+    height: { pc: '100vh', tablet: '100vh' },
     width: { pc: '280px', tablet: '280px' },
     minWidth: { pc: '280px', tablet: '280px' },
     maxWidth: { pc: '280px', tablet: '280px' },
