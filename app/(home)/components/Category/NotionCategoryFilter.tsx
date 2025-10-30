@@ -1,5 +1,5 @@
 import { CategoryFilterSkeleton } from './CategoryFilterSkeleton'
-import { Container, Button, ActiveButton } from './NotionCategoryFilter.styles'
+import { ActiveButton, Button, Container } from './NotionCategoryFilter.styles'
 
 interface NotionCategoryFilterProps {
   onCategoryChange: (category: string) => void
@@ -20,11 +20,11 @@ export function NotionCategoryFilter({
     <Container>
       {activeCategory === '전체' ? (
         <ActiveButton onClick={() => onCategoryChange('전체')}>
-          전체
+          전체 ({categories.reduce((total, cat) => total + cat.count, 0)})
         </ActiveButton>
       ) : (
         <Button onClick={() => onCategoryChange('전체')}>
-          전체
+          전체 ({categories.reduce((total, cat) => total + cat.count, 0)})
         </Button>
       )}
       {categories.map((cat) => (
