@@ -36,6 +36,7 @@
     "crypto-js": "^4.2.0",
     "expiry-map": "^2.0.0",
     "fathom-client": "^3.4.1",
+    "genshin-data": "^0.55.0",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "ky": "^1.8.1",

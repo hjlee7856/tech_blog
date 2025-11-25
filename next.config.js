@@ -19,6 +19,10 @@ export default withBundleAnalyzer({
         protocol: 'https',
         hostname: 'prod-files-secure.s3.us-west-2.amazonaws.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'upload-os-bbs.mihoyo.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     dangerouslyAllowSVG: true,

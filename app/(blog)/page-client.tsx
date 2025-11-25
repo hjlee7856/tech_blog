@@ -1,20 +1,25 @@
-'use client'
+'use client';
 
-import { useRef, useState } from 'react'
+import { useRef, useState } from 'react';
 
-import { FloatingScrollTopButton } from '@/components/Button/Floating/FloatingScrollTopButton'
-import { Footer } from '@/components/Footer/Footer'
-import { Header } from '@/components/Header/Header'
-import { ProfileSidebar } from '@/components/Sidebar/ProfileSidebar'
-import { useNotionData } from '@/hooks/useNotionData'
-import type { NotionPage } from '@/lib/notion-page'
-import { Content, ContentContainer, Main, MainContent } from '@/styles/page-layout.styles'
-import { NotionCardList } from 'app/(home)/components/CardList/NotionCardList'
-import { NotionCardSkeleton } from 'app/(home)/components/CardList/NotionCardSkeleton'
-import { NotionGalleryCarousel } from 'app/(home)/components/Carousel/NotionGalleryCarousel'
-import { Pagination } from 'app/(home)/components/Pagenation/Pagination'
-import { PaginationSkeleton } from 'app/(home)/components/Pagenation/PaginationSkeleton'
-import { SearchBar } from 'app/(home)/components/Search/SearchBar'
+import { FloatingScrollTopButton } from '@/components/Button/Floating/FloatingScrollTopButton';
+import { Footer } from '@/components/Footer/Footer';
+import { Header } from '@/components/Header/Header';
+import { ProfileSidebar } from '@/components/Sidebar/ProfileSidebar';
+import { useNotionData } from '@/hooks/useNotionData';
+import type { NotionPage } from '@/lib/notion-page';
+import {
+  Content,
+  ContentContainer,
+  Main,
+  MainContent,
+} from '@/styles/page-layout.styles';
+import { NotionCardList } from 'app/(blog)/components/CardList/NotionCardList';
+import { NotionCardSkeleton } from 'app/(blog)/components/CardList/NotionCardSkeleton';
+import { NotionGalleryCarousel } from 'app/(blog)/components/Carousel/NotionGalleryCarousel';
+import { Pagination } from 'app/(blog)/components/Pagenation/Pagination';
+import { PaginationSkeleton } from 'app/(blog)/components/Pagenation/PaginationSkeleton';
+import { SearchBar } from 'app/(blog)/components/Search/SearchBar';
 
 interface NotionDomainPageClientProps {
   pages: NotionPage[];
@@ -50,7 +55,9 @@ export function NotionDomainPageClient({
     pageSize,
   });
 
-  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+  const handleSearchInputKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ): void => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -58,7 +65,9 @@ export function NotionDomainPageClient({
     }
   };
 
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleSearchInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): void => {
     const newValue = e.target.value;
     setInputValue(newValue);
     if (newValue === '') {
@@ -68,7 +77,10 @@ export function NotionDomainPageClient({
 
   return (
     <div>
-      <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} showToggle={true} />
+      <Header
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        showToggle={true}
+      />
       <ContentContainer>
         <ProfileSidebar
           name="HJ"
@@ -80,7 +92,20 @@ export function NotionDomainPageClient({
           onCategoryChange={handleCategoryChange}
           isOpen={isSidebarOpen}
         />
-        {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 100 }} />}
+        {isSidebarOpen && (
+          <div
+            onClick={() => setIsSidebarOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 100,
+            }}
+          />
+        )}
         <MainContent>
           {initialPages.length === 0 ? (
             <NotionGalleryCarousel pages={items.slice(0, 10)} />
@@ -89,17 +114,17 @@ export function NotionDomainPageClient({
           )}
           <Main>
             <Content>
-                <SearchBar
-                  value={inputValue}
-                  onChange={handleSearchInputChange}
-                  onSearch={() => {
-                    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-                    handleSearch(inputValue);
-                  }}
-                  onKeyDown={handleSearchInputKeyDown}
-                  loading={loading}
-                />
-
+              <SearchBar
+                value={inputValue}
+                onChange={handleSearchInputChange}
+                onSearch={() => {
+                  if (debounceTimerRef.current)
+                    clearTimeout(debounceTimerRef.current);
+                  handleSearch(inputValue);
+                }}
+                onKeyDown={handleSearchInputKeyDown}
+                loading={loading}
+              />
 
               <section
                 style={{
@@ -118,7 +143,7 @@ export function NotionDomainPageClient({
                         <NotionCardSkeleton />
                         <PaginationSkeleton />
                       </>
-                    )
+                    );
                   }
 
                   if (searchTerm.length > 0 && items.length === 0) {
@@ -136,7 +161,7 @@ export function NotionDomainPageClient({
                       >
                         검색 결과가 없습니다
                       </div>
-                    )
+                    );
                   }
 
                   return (
@@ -148,7 +173,7 @@ export function NotionDomainPageClient({
                         onPageChange={setCurrentPage}
                       />
                     </>
-                  )
+                  );
                 })()}
               </section>
             </Content>
@@ -159,7 +184,7 @@ export function NotionDomainPageClient({
       </ContentContainer>
       <Footer />
     </div>
-  )
+  );
 }
 
 export default NotionDomainPageClient;

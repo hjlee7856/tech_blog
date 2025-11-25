@@ -41,7 +41,11 @@ export default async function NotionDomainPage() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <NotionDomainPageClient pages={data} total={total} categories={categoriesData} />
+      <NotionDomainPageClient
+        pages={data}
+        total={total}
+        categories={categoriesData}
+      />
     </Suspense>
   );
 }

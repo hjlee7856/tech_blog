@@ -10,7 +10,9 @@ function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" style={{ height: '100%' }}>
       <head />
-      <body style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <body
+        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      >
         {children}
       </body>
     </html>
