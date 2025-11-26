@@ -66,6 +66,7 @@ import {
   ReadyButton,
   ReadySection,
   SelectDrawButton,
+  StartGameButton,
   StatusText,
   TurnInfo,
   TurnSection,
@@ -421,21 +422,34 @@ export function BingoGame({
       </GameStatus>
 
       {/* 게임 대기 중일 때 준비 섹션 */}
-      {!gameState?.is_started && (
-        <ReadySection>
-          <ReadyButton
-            isReady={myPlayer?.is_ready ?? false}
-            onClick={handleToggleReady}
-            disabled={myPlayer?.board.length !== 25}
-          >
-            {myPlayer?.board.length !== 25
-              ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
-              : myPlayer?.is_ready
-                ? '준비 완료!'
-                : '준비하기'}
-          </ReadyButton>
-        </ReadySection>
-      )}
+      {!gameState?.is_started &&
+        (() => {
+          const readyPlayers = players.filter(
+            (p) => p.is_online && p.is_ready && p.board.length === 25,
+          );
+          const canStartGame = readyPlayers.length >= 2;
+
+          return (
+            <ReadySection>
+              <ReadyButton
+                isReady={myPlayer?.is_ready ?? false}
+                onClick={handleToggleReady}
+                disabled={myPlayer?.board.length !== 25}
+              >
+                {myPlayer?.board.length !== 25
+                  ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
+                  : myPlayer?.is_ready
+                    ? '준비 완료!'
+                    : '준비하기'}
+              </ReadyButton>
+              {canStartGame && (
+                <StartGameButton onClick={() => void startGame(true)}>
+                  게임 시작 ({readyPlayers.length}명 준비됨)
+                </StartGameButton>
+              )}
+            </ReadySection>
+          );
+        })()}
 
       {gameState?.is_started && (
         <TurnSection>

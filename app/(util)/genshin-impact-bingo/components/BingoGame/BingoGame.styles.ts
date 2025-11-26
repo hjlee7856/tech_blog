@@ -283,6 +283,32 @@ export const ReadyButton = styled('button', {
   },
 });
 
+export const StartGameButton = styled('button', {
+  base: {
+    padding: '10px 24px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#ED4245',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#C73E3A',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      backgroundColor: '#3F4147',
+    },
+    md: {
+      padding: '12px 32px',
+      fontSize: '18px',
+    },
+  },
+});
+
 export const ReadyStatus = styled('div', {
   base: {
     display: 'flex',
