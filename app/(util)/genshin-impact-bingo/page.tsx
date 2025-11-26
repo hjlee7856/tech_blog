@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     url: 'https://bingo-genshin-impact.vercel.app/genshin-impact-bingo',
     images: [
       {
-        url: 'https://bingo-genshin-impact.vercel.app/genshin-impact/og-img.png',
+        url: 'https://bingo-genshin-impact.vercel.app/genshin-impact/og-img.jpg',
         width: 1200,
         height: 630,
       },
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     description: '즐거운 연말, 원직쉼 송년회 빙고 맞추고, 상품 Get!',
     images: [
       {
-        url: 'https://bingo-genshin-impact.vercel.app/genshin-impact/og-img.png',
+        url: 'https://bingo-genshin-impact.vercel.app/genshin-impact/og-img.jpg',
         width: 1200,
         height: 630,
       },
