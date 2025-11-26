@@ -5,7 +5,6 @@ export const Container = styled('div', {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '0 16px',
     width: '100%',
     maxWidth: '100vw',
     boxSizing: 'border-box',
