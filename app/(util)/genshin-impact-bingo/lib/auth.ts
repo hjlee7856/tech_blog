@@ -12,34 +12,12 @@ export interface User {
 // 프로필 이미지는 영어 이름으로 DB에 저장 (e.g., "Nahida")
 // 실제 이미지 경로는 /genshin-impact/{englishName}_Avatar.webp
 
-// 기본 프로필 이미지용 캐릭터 목록 (GenshinData 번들 크기 문제로 하드코딩)
-const DEFAULT_PROFILE_NAMES = [
-  'Nahida',
-  'Furina',
-  'Raiden Shogun',
-  'Hu Tao',
-  'Ganyu',
-  'Ayaka',
-  'Zhongli',
-  'Venti',
-  'Kazuha',
-  'Yelan',
-  'Xiao',
-  'Eula',
-  'Kokomi',
-  'Yoimiya',
-  'Shenhe',
-  'Aino',
-];
+// 기본 프로필 이미지
+const DEFAULT_PROFILE_NAME = 'Arama';
 
 export function getProfileImagePath(englishName: string): string {
   const safeName = englishName.replaceAll(' ', '_').replaceAll('%20', '_');
   return `/genshin-impact/${safeName}_Avatar.webp`;
-}
-
-export function getRandomProfileName(): string {
-  const index = Math.floor(Math.random() * DEFAULT_PROFILE_NAMES.length);
-  return DEFAULT_PROFILE_NAMES[index] ?? 'Aino';
 }
 
 const STORAGE_KEY = 'genshin-bingo-user';
@@ -68,7 +46,7 @@ export async function register(
 
     const hashedPassword = await hashPassword(password);
 
-    const profileImage = getRandomProfileName();
+    const profileImage = DEFAULT_PROFILE_NAME;
 
     const { data, error } = await supabase
       .from('genshin-bingo-game-user')
@@ -122,7 +100,7 @@ export async function login(
       score: data.score,
       order: data.order,
       is_admin: data.is_admin,
-      profile_image: data.profile_image || getRandomProfileName(),
+      profile_image: data.profile_image || DEFAULT_PROFILE_NAME,
     };
     saveToStorage(user, hashedPassword);
     return { success: true, user };
@@ -158,7 +136,7 @@ export async function autoLogin(): Promise<{ success: boolean; user?: User }> {
       score: data.score,
       order: data.order,
       is_admin: data.is_admin,
-      profile_image: data.profile_image || getRandomProfileName(),
+      profile_image: data.profile_image || DEFAULT_PROFILE_NAME,
     };
     return { success: true, user };
   } catch {

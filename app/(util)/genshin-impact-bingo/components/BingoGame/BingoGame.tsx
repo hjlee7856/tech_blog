@@ -80,12 +80,13 @@ export function BingoGame({
     null,
   );
   const [showAloneModal, setShowAloneModal] = useState(false);
+  const isCountdownStartingRef = useRef(false);
 
   // 모든 플레이어가 준비되었는지 체크하고 게임 시작 카운트다운
   useEffect(() => {
     if (!gameState || gameState.is_started || gameState.is_finished) return;
-    // 이미 카운트다운 중이면 중복 실행 방지
-    if (countdown !== null) return;
+    // 이미 카운트다운 중이면 중복 실행 방지 (ref로 동기적 체크)
+    if (countdown !== null || isCountdownStartingRef.current) return;
 
     const onlinePlayers = players.filter((p) => p.is_online);
     const readyPlayers = onlinePlayers.filter(
@@ -97,6 +98,7 @@ export function BingoGame({
       onlinePlayers.length >= 2 &&
       readyPlayers.length === onlinePlayers.length
     ) {
+      isCountdownStartingRef.current = true;
       setCountdownType('start');
       setCountdown(3);
     }
@@ -115,6 +117,7 @@ export function BingoGame({
       }
       setCountdown(null);
       setCountdownType(null);
+      isCountdownStartingRef.current = false;
       return;
     }
 
