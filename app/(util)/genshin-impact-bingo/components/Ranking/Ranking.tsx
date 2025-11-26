@@ -73,7 +73,7 @@ export function Ranking({ isGameStarted }: RankingProps) {
 
   return (
     <Container>
-      <Title>🏆 실시간 순위</Title>
+      <Title>실시간 순위</Title>
       <RankList>
         {players.slice(0, 10).map((player) => {
           const rank = rankMap.get(player.id) ?? 0;

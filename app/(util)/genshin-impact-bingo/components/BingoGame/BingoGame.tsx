@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   autoLogin,
   getProfileImagePath,
@@ -334,8 +334,8 @@ export function BingoGame({
       <GameStatus>
         <StatusText isStarted={gameState?.is_started ?? false}>
           {gameState?.is_started
-            ? '🎮 게임 진행 중'
-            : `⏳ 게임 대기 중 - ${myPlayer?.is_ready ? '다른 유저를 기다리는 중' : '보드를 채워주세요!'}`}
+            ? '게임 진행 중'
+            : `게임 대기 중 - ${myPlayer?.is_ready ? '다른 유저를 기다리는 중' : '보드를 채워주세요!'}`}
         </StatusText>
         {gameState?.is_started && lastDrawnName && (
           <DrawnNameDisplay isLatest>
@@ -355,8 +355,8 @@ export function BingoGame({
             {myPlayer?.board.length !== 25
               ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
               : myPlayer?.is_ready
-                ? '✅ 준비 완료!'
-                : '🎮 준비하기'}
+                ? '준비 완료!'
+                : '준비하기'}
           </ReadyButton>
         </ReadySection>
       )}
