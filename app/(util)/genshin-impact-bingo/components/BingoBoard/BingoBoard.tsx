@@ -6,6 +6,7 @@ import { createNameMap } from '../../lib/characterUtils';
 import { getPlayerBoard, saveBoard, setReadyFalse } from '../../lib/game';
 import { CharacterSelectModal } from '../CharacterSelectModal/CharacterSelectModal';
 import {
+  AllMatchedCell,
   BingoLineCell,
   Board,
   Button,
@@ -37,16 +38,15 @@ export function BingoBoard({
   initialBoard,
   playerOrder = 0,
 }: BingoBoardProps) {
+  // 초기값은 빈 보드로 시작, DB에서 로드 후 업데이트
   const [board, setBoard] = useState<(string | null)[]>(
-    initialBoard?.length === 25
-      ? initialBoard
-      : Array.from<string | null>({ length: 25 }).fill(null),
+    Array.from<string | null>({ length: 25 }).fill(null),
   );
   const [selectedCell, setSelectedCell] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 컴포넌트 마운트 시 DB에서 보드 로드
+  // 컴포넌트 마운트 시 DB에서 보드 로드 (항상 DB 우선)
   useEffect(() => {
     if (isLoaded) return;
     const loadBoard = async () => {
@@ -62,11 +62,14 @@ export function BingoBoard({
           if (idx < 25) newBoard[idx] = name;
         }
         setBoard(newBoard);
+      } else if (initialBoard?.length === 25) {
+        // DB에 저장된 보드가 없으면 initialBoard 사용
+        setBoard(initialBoard);
       }
       setIsLoaded(true);
     };
     void loadBoard();
-  }, [userId, isLoaded]);
+  }, [userId, isLoaded, initialBoard]);
 
   // 한글-영어 이름 매핑
   const nameMap = useMemo(
@@ -180,6 +183,13 @@ export function BingoBoard({
 
   const isInBingoLine = (index: number) => bingoLineCells.has(index);
 
+  // 모든 셀이 매칭되었는지 확인
+  const isAllMatched = useMemo(() => {
+    const filledCells = board.filter((n) => n !== null);
+    if (filledCells.length !== 25) return false;
+    return filledCells.every((name) => drawnNames.includes(name as string));
+  }, [board, drawnNames]);
+
   return (
     <Container>
       {canEditBoard && (
@@ -193,6 +203,28 @@ export function BingoBoard({
         {board.map((name, index) => {
           const matched = isMatched(name);
           const inBingoLine = isInBingoLine(index);
+
+          // 모든 셀이 매칭되었을 때 (빨간색 네온)
+          if (isAllMatched && matched) {
+            return (
+              <AllMatchedCell key={index}>
+                {name && (
+                  <>
+                    <CellImage>
+                      <Image
+                        src={getImagePath(name)}
+                        alt={name}
+                        width={48}
+                        height={48}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </CellImage>
+                    <CellName>{name}</CellName>
+                  </>
+                )}
+              </AllMatchedCell>
+            );
+          }
 
           // 빙고 줄에 포함된 셀 (금색)
           if (matched && inBingoLine) {

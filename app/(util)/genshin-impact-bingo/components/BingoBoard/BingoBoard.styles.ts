@@ -183,6 +183,40 @@ export const BingoLineCell = styled('div', {
   },
 });
 
+// 모든 셀이 매칭되었을 때 (빨간색 네온)
+export const AllMatchedCell = styled('div', {
+  base: {
+    aspectRatio: '1',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    fontSize: '8px',
+    fontWeight: '600',
+    backgroundColor: '#3d1a1a',
+    color: '#ED4245',
+    border: '2px solid #ED4245',
+    borderRadius: '4px',
+    padding: '2px',
+    textAlign: 'center',
+    wordBreak: 'keep-all',
+    lineHeight: '1.1',
+    overflow: 'hidden',
+    boxShadow:
+      '0 0 8px #ED4245, 0 0 16px #ED4245, inset 0 0 8px rgba(237, 66, 69, 0.3)',
+    md: {
+      gap: '8px',
+      fontSize: '11px',
+      border: '3px solid #ED4245',
+      borderRadius: '8px',
+      padding: '4px',
+      boxShadow:
+        '0 0 10px #ED4245, 0 0 20px #ED4245, 0 0 30px #ED4245, inset 0 0 10px rgba(237, 66, 69, 0.3)',
+    },
+  },
+});
+
 export const CellImage = styled('div', {
   base: {
     width: '28px',

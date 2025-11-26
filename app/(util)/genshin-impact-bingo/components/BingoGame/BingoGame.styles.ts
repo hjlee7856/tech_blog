@@ -523,3 +523,238 @@ export const MyRankDisplay = styled('div', {
     },
   },
 });
+
+// 뽑은 이름 목록
+export const DrawnNamesSection = styled('div', {
+  base: {
+    width: '100%',
+    maxWidth: '400px',
+    marginTop: '16px',
+    padding: '12px',
+    backgroundColor: '#2B2D31',
+    borderRadius: '12px',
+    md: {
+      maxWidth: '600px',
+      padding: '16px',
+    },
+  },
+});
+
+export const DrawnNamesTitle = styled('h3', {
+  base: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#B5BAC1',
+    marginBottom: '8px',
+    textAlign: 'center',
+    md: {
+      fontSize: '16px',
+      marginBottom: '12px',
+    },
+  },
+});
+
+export const DrawnNamesList = styled('div', {
+  base: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    justifyContent: 'center',
+    maxHeight: '120px',
+    overflowY: 'auto',
+    md: {
+      gap: '8px',
+      maxHeight: '150px',
+    },
+  },
+});
+
+export const DrawnNameTag = styled('span', {
+  base: {
+    padding: '4px 8px',
+    fontSize: '12px',
+    backgroundColor: '#3F4147',
+    color: '#B5BAC1',
+    borderRadius: '4px',
+    md: {
+      padding: '6px 10px',
+      fontSize: '13px',
+    },
+  },
+  variants: {
+    isLatest: {
+      true: {
+        backgroundColor: '#5865F2',
+        color: 'white',
+        fontWeight: 'bold',
+      },
+    },
+  },
+});
+
+// 이름 뽑기 모달
+export const DrawModalContent = styled('div', {
+  base: {
+    backgroundColor: '#2B2D31',
+    borderRadius: '16px',
+    padding: '24px 16px',
+    maxWidth: '400px',
+    width: '90%',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px',
+    md: {
+      padding: '32px',
+      maxWidth: '500px',
+    },
+  },
+});
+
+export const DrawModalTitle = styled('h2', {
+  base: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: 'white',
+    md: {
+      fontSize: '24px',
+    },
+  },
+});
+
+export const DrawModalButtons = styled('div', {
+  base: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    md: {
+      gap: '16px',
+    },
+  },
+});
+
+export const RandomDrawButton = styled('button', {
+  base: {
+    padding: '16px 24px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#5865F2',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#4752C4',
+      transform: 'scale(1.02)',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      transform: 'none',
+    },
+    md: {
+      padding: '20px 32px',
+      fontSize: '20px',
+    },
+  },
+});
+
+export const CancelDrawButton = styled('button', {
+  base: {
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#B5BAC1',
+    backgroundColor: 'transparent',
+    border: '1px solid #3F4147',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#3F4147',
+    },
+    md: {
+      padding: '14px 28px',
+      fontSize: '16px',
+    },
+  },
+});
+
+export const SelectDrawButton = styled('button', {
+  base: {
+    padding: '16px 24px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#3BA55C',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#2D8049',
+      transform: 'scale(1.02)',
+    },
+    md: {
+      padding: '20px 32px',
+      fontSize: '20px',
+    },
+  },
+});
+
+// 이름 선택 그리드
+export const NameSelectGrid = styled('div', {
+  base: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '8px',
+    maxHeight: '300px',
+    overflowY: 'auto',
+    width: '100%',
+    padding: '8px',
+    md: {
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '10px',
+      maxHeight: '400px',
+    },
+  },
+});
+
+export const NameSelectItem = styled('button', {
+  base: {
+    padding: '8px 4px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: 'white',
+    backgroundColor: '#3F4147',
+    border: '2px solid transparent',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    textAlign: 'center',
+    wordBreak: 'keep-all',
+    _hover: {
+      backgroundColor: '#5865F2',
+      borderColor: '#5865F2',
+    },
+    md: {
+      padding: '10px 8px',
+      fontSize: '13px',
+    },
+  },
+  variants: {
+    isInMyBoard: {
+      true: {
+        backgroundColor: '#3d3520',
+        borderColor: '#FFD700',
+        color: '#FFD700',
+        _hover: {
+          backgroundColor: '#4d4530',
+          borderColor: '#FFD700',
+        },
+      },
+    },
+  },
+});

@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
+import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -34,12 +35,21 @@ import { OnboardingOverlay } from '../OnboardingOverlay';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
+  CancelDrawButton,
   Container,
   CountdownNumber,
   CountdownOverlay,
   CountdownText,
   DrawButton,
+  DrawModalButtons,
+  DrawModalContent,
+  DrawModalTitle,
   DrawnNameDisplay,
+  DrawnNamesList,
+  DrawnNamesSection,
+  DrawnNamesTitle,
+  DrawnNameTag,
+  DrawnResultName,
   GameStatus,
   Header,
   LogoutButton,
@@ -47,11 +57,15 @@ import {
   ModalOverlay,
   ModalTitle,
   MyRankDisplay,
+  NameSelectGrid,
+  NameSelectItem,
   ProfileImage,
+  RandomDrawButton,
   RankingItem,
   RankingList,
   ReadyButton,
   ReadySection,
+  SelectDrawButton,
   StatusText,
   TurnInfo,
   TurnSection,
@@ -83,7 +97,13 @@ export function BingoGame({
   );
   const [showAloneModal, setShowAloneModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showDrawModal, setShowDrawModal] = useState(false);
+  const [drawnResult, setDrawnResult] = useState<string | null>(null); // 뽑은 결과
+  const [drawMode, setDrawMode] = useState<'select' | 'random' | 'list'>(
+    'select',
+  ); // 뽑기 모드
   const isCountdownStartingRef = useRef(false);
+  const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
   // 모든 플레이어가 준비되었는지 체크하고 게임 시작 카운트다운
   useEffect(() => {
@@ -103,7 +123,7 @@ export function BingoGame({
     ) {
       isCountdownStartingRef.current = true;
       setCountdownType('start');
-      setCountdown(3);
+      setCountdown(5);
     }
   }, [players, gameState, countdown]);
 
@@ -155,9 +175,9 @@ export function BingoGame({
         const ranking = await getOnlinePlayersRanking();
         setFinalRanking(ranking);
         setShowFinishModal(true);
-        // 게임 종료 후 3초 카운트다운 시작
+        // 게임 종료 후 5초 카운트다운 시작
         setCountdownType('reset');
-        setCountdown(3);
+        setCountdown(5);
       }
     });
 
@@ -224,9 +244,13 @@ export function BingoGame({
     if (!gameState || isDrawing) return;
 
     setIsDrawing(true);
+    setDrawnResult(null);
     const result = await drawName(characterNames, gameState.drawn_names);
 
     if (result.success && result.name) {
+      // 뽑은 결과 저장
+      setDrawnResult(result.name);
+
       // 점수 업데이트
       const newDrawnNames = [...gameState.drawn_names, result.name];
 
@@ -236,6 +260,8 @@ export function BingoGame({
         const ranking = await getOnlinePlayersRanking();
         setFinalRanking(ranking);
         setShowFinishModal(true);
+        setShowDrawModal(false);
+        setDrawnResult(null);
         setIsDrawing(false);
         return;
       }
@@ -249,6 +275,7 @@ export function BingoGame({
       }
     } else {
       alert(result.error || '이름 뽑기에 실패했습니다.');
+      setShowDrawModal(false);
     }
 
     setIsDrawing(false);
@@ -271,6 +298,81 @@ export function BingoGame({
     }
   };
 
+  // 선택해서 뽑기
+  const handleSelectDraw = async (selectedName: string) => {
+    if (!gameState || isDrawing) return;
+
+    setIsDrawing(true);
+    setDrawnResult(null);
+
+    // 선택한 이름을 drawn_names에 추가
+    const newDrawnNames = [...gameState.drawn_names, selectedName];
+
+    const { error } = await supabase
+      .from('genshin-bingo-game-state')
+      .update({
+        drawn_names: newDrawnNames,
+      })
+      .eq('id', 1);
+
+    if (!error) {
+      setDrawnResult(selectedName);
+
+      // 게임 종료 체크
+      const finishResult = await checkGameFinish(newDrawnNames);
+      if (finishResult.finished) {
+        const ranking = await getOnlinePlayersRanking();
+        setFinalRanking(ranking);
+        setShowFinishModal(true);
+        setShowDrawModal(false);
+        setDrawnResult(null);
+        setDrawMode('select');
+        setIsDrawing(false);
+        return;
+      }
+
+      await checkAndUpdateAllScores(newDrawnNames);
+
+      // 다음 턴으로
+      const activePlayers = players.filter((p) => p.order > 0 && p.is_online);
+      if (activePlayers.length > 0) {
+        await nextTurn(activePlayers.length);
+      }
+    } else {
+      alert('이름 뽑기에 실패했습니다.');
+      setShowDrawModal(false);
+      setDrawMode('select');
+    }
+
+    setIsDrawing(false);
+  };
+
+  const lastDrawnName = gameState?.drawn_names.at(-1);
+  const myPlayer = players.find((p) => p.id === user?.id);
+  const isMyTurn =
+    gameState?.is_started &&
+    myPlayer &&
+    myPlayer.order > 0 &&
+    myPlayer.order === gameState.current_order;
+  const currentTurnPlayer = players.find(
+    (p) => p.order === gameState?.current_order,
+  );
+
+  // 자기 턴이 되면 자동으로 이름 뽑기 모달 열기
+  useEffect(() => {
+    if (isMyTurn && !isDrawing && !showDrawModal) {
+      setShowDrawModal(true);
+    }
+  }, [isMyTurn, isDrawing, showDrawModal]);
+
+  // 뽑은 이름 목록 자동 스크롤
+  useEffect(() => {
+    if (drawnNamesListRef.current) {
+      drawnNamesListRef.current.scrollTop =
+        drawnNamesListRef.current.scrollHeight;
+    }
+  }, [gameState?.drawn_names.length]);
+
   if (isLoading) {
     return (
       <Container style={{ minHeight: '100vh' }}>
@@ -282,17 +384,6 @@ export function BingoGame({
   if (!user) {
     return <LoginModal onLogin={handleLogin} />;
   }
-
-  const lastDrawnName = gameState?.drawn_names.at(-1);
-  const myPlayer = players.find((p) => p.id === user.id);
-  const isMyTurn =
-    gameState?.is_started &&
-    myPlayer &&
-    myPlayer.order > 0 &&
-    myPlayer.order === gameState.current_order;
-  const currentTurnPlayer = players.find(
-    (p) => p.order === gameState?.current_order,
-  );
 
   return (
     <Container>
@@ -348,13 +439,16 @@ export function BingoGame({
 
       {gameState?.is_started && (
         <TurnSection>
-          <TurnInfo isMyTurn={isMyTurn}>
-            {isMyTurn
-              ? '당신의 차례입니다!'
-              : `${currentTurnPlayer?.name || '대기 중'} 님이 이름을 뽑고 있습니다.`}
-          </TurnInfo>
-          {isMyTurn && (
-            <DrawButton onClick={handleDrawName} disabled={isDrawing}>
+          {!isMyTurn && (
+            <TurnInfo>
+              {`${currentTurnPlayer?.name || '대기 중'} 님이 이름을 뽑고 있습니다.`}
+            </TurnInfo>
+          )}
+          {isMyTurn && !showDrawModal && (
+            <DrawButton
+              onClick={() => setShowDrawModal(true)}
+              disabled={isDrawing}
+            >
               {isDrawing ? '뽑는 중...' : '이름 뽑기'}
             </DrawButton>
           )}
@@ -386,7 +480,108 @@ export function BingoGame({
         playerOrder={myPlayer?.order ?? 0}
       />
 
+      {/* 뽑은 이름 목록 */}
+      {gameState?.is_started && gameState.drawn_names.length > 0 && (
+        <DrawnNamesSection>
+          <DrawnNamesTitle>
+            뽑은 이름 ({gameState.drawn_names.length}개)
+          </DrawnNamesTitle>
+          <DrawnNamesList ref={drawnNamesListRef}>
+            {gameState.drawn_names.map((name, index) => (
+              <DrawnNameTag
+                key={`${name}-${index}`}
+                isLatest={index === gameState.drawn_names.length - 1}
+              >
+                {name}
+              </DrawnNameTag>
+            ))}
+          </DrawnNamesList>
+        </DrawnNamesSection>
+      )}
+
       <Ranking isGameStarted={gameState?.is_started} />
+
+      {/* 이름 뽑기 모달 */}
+      {gameState?.is_started &&
+        showDrawModal &&
+        (() => {
+          // 남은 이름 목록 계산
+          const remainingNames = characterNames.filter(
+            (name) => !gameState?.drawn_names.includes(name),
+          );
+          // 내 보드에 있는 이름
+          const myBoardNames = new Set(myPlayer?.board || []);
+
+          return (
+            <ModalOverlay>
+              <DrawModalContent
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              >
+                {drawnResult ? (
+                  <>
+                    <DrawModalTitle>뽑은 이름</DrawModalTitle>
+                    <DrawnResultName style={{ fontSize: '32px' }}>
+                      {drawnResult}
+                    </DrawnResultName>
+                    <CancelDrawButton
+                      onClick={() => {
+                        setShowDrawModal(false);
+                        setDrawnResult(null);
+                        setDrawMode('select');
+                      }}
+                    >
+                      닫기
+                    </CancelDrawButton>
+                  </>
+                ) : drawMode === 'select' ? (
+                  <>
+                    <DrawModalTitle>당신의 차례입니다!</DrawModalTitle>
+                    <DrawModalButtons>
+                      <RandomDrawButton
+                        onClick={() => void handleDrawName()}
+                        disabled={isDrawing}
+                      >
+                        {isDrawing ? '뽑는 중...' : '랜덤으로 뽑기'}
+                      </RandomDrawButton>
+                      <SelectDrawButton
+                        onClick={() => setDrawMode('list')}
+                        disabled={isDrawing}
+                      >
+                        선택해서 뽑기
+                      </SelectDrawButton>
+                    </DrawModalButtons>
+                  </>
+                ) : (
+                  <>
+                    <DrawModalTitle>
+                      이름 선택 ({remainingNames.length}개 남음)
+                    </DrawModalTitle>
+                    <p
+                      style={{ fontSize: '12px', color: '#FFD700', margin: 0 }}
+                    >
+                      ⭐ 금색은 내 보드에 있는 이름
+                    </p>
+                    <NameSelectGrid>
+                      {remainingNames.map((name) => (
+                        <NameSelectItem
+                          key={name}
+                          isInMyBoard={myBoardNames.has(name)}
+                          onClick={() => void handleSelectDraw(name)}
+                          disabled={isDrawing}
+                        >
+                          {name}
+                        </NameSelectItem>
+                      ))}
+                    </NameSelectGrid>
+                    <CancelDrawButton onClick={() => setDrawMode('select')}>
+                      뒤로
+                    </CancelDrawButton>
+                  </>
+                )}
+              </DrawModalContent>
+            </ModalOverlay>
+          );
+        })()}
 
       {/* 게임 종료 모달 */}
       {showFinishModal &&
