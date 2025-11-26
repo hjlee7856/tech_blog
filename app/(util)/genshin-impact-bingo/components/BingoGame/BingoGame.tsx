@@ -200,9 +200,8 @@ export function BingoGame({
       ) {
         const elapsed = Date.now() - hiddenTime;
         if (elapsed >= LOGOUT_TIMEOUT) {
-          // 1분 이상 안 봤으면 로그아웃
+          // 1분 이상 안 봤으면 오프라인
           void updateOnlineStatus(user.id, false);
-          logout();
           setUser(null);
         }
         hiddenTime = null;
@@ -211,7 +210,6 @@ export function BingoGame({
 
     const handleBeforeUnload = () => {
       void updateOnlineStatus(user.id, false);
-      logout();
       setUser(null);
     };
 
