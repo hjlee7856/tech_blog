@@ -169,11 +169,25 @@ export async function drawName(
   return { success: true, name: drawnName };
 }
 
-export async function nextTurn(totalPlayers: number): Promise<boolean> {
+export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
   const gameState = await getGameState();
   if (!gameState) return false;
 
-  const nextOrder = (gameState.current_order % totalPlayers) + 1;
+  // 온라인이고 게임에 참여 중인(order > 0) 플레이어들만 조회
+  const players = await getAllPlayers();
+  const onlineActivePlayers = players
+    .filter((p) => p.is_online && p.order > 0)
+    .toSorted((a, b) => a.order - b.order);
+
+  if (onlineActivePlayers.length === 0) return false;
+
+  // 현재 순서보다 큰 온라인 플레이어 찾기
+  const nextPlayer = onlineActivePlayers.find(
+    (p) => p.order > gameState.current_order,
+  );
+
+  // 없으면 첫 번째 온라인 플레이어로 돌아감
+  const nextOrder = nextPlayer?.order ?? onlineActivePlayers[0]?.order ?? 1;
 
   const { error } = await supabase
     .from('genshin-bingo-game-state')

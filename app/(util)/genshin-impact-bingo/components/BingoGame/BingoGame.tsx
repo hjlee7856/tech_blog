@@ -178,7 +178,20 @@ export function BingoGame({
             }, 3000);
           }
         });
+        return;
       }
+
+      // 현재 턴인 플레이어가 오프라인이면 다음 턴으로 자동 넘김
+      void getGameState().then((state) => {
+        if (state?.is_started && !state.is_finished) {
+          const currentTurnPlayer = playerList.find(
+            (p) => p.order === state.current_order,
+          );
+          if (currentTurnPlayer && !currentTurnPlayer.is_online) {
+            void nextTurn();
+          }
+        }
+      });
     });
 
     return () => {
