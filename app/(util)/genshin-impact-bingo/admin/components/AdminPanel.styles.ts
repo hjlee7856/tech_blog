@@ -2,7 +2,6 @@ import { styled } from '@/styled-system/jsx';
 
 export const Container = styled('div', {
   base: {
-    minHeight: '100vh',
     backgroundColor: '#1E1F22',
     padding: '40px 20px',
   },

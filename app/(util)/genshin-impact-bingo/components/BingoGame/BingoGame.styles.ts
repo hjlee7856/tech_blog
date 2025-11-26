@@ -130,6 +130,15 @@ export const DrawnNameDisplay = styled('p', {
       padding: '8px 16px',
     },
   },
+  variants: {
+    isLatest: {
+      true: {
+        color: '#FFD700',
+        fontWeight: 'bold',
+        backgroundColor: '#3d3520',
+      },
+    },
+  },
 });
 
 export const TurnSection = styled('div', {
@@ -208,6 +217,7 @@ export const DrawnResult = styled('div', {
     backgroundColor: '#3F4147',
     borderRadius: '8px',
     animation: 'fadeIn 0.3s ease-in-out',
+    color: '#fff',
   },
 });
 
@@ -454,6 +464,63 @@ export const CloseButton = styled('button', {
     md: {
       padding: '12px 32px',
       fontSize: '16px',
+    },
+  },
+});
+
+// 카운트다운 오버레이
+export const CountdownOverlay = styled('div', {
+  base: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+});
+
+export const CountdownNumber = styled('div', {
+  base: {
+    fontSize: '120px',
+    fontWeight: 'bold',
+    color: '#FFD700',
+    md: {
+      fontSize: '180px',
+    },
+  },
+});
+
+export const CountdownText = styled('p', {
+  base: {
+    fontSize: '20px',
+    color: 'white',
+    marginTop: '16px',
+    md: {
+      fontSize: '28px',
+    },
+  },
+});
+
+// 내 순위 표시
+export const MyRankDisplay = styled('div', {
+  base: {
+    marginTop: '16px',
+    padding: '12px 20px',
+    backgroundColor: '#5865F2',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    md: {
+      fontSize: '18px',
+      padding: '16px 24px',
     },
   },
 });

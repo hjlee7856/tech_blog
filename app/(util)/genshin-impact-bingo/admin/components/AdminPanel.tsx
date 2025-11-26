@@ -165,7 +165,7 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
 
   if (!user) {
     return (
-      <Container>
+      <Container style={{ minHeight: '100vh' }}>
         <Title>⛔ 접근 권한이 없습니다</Title>
         <InfoText style={{ textAlign: 'center' }}>
           어드민 권한이 있는 계정으로 로그인해주세요.
@@ -260,42 +260,46 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
       </Section>
 
       <Section>
-        <SectionTitle>플레이어 목록 ({players.length}명)</SectionTitle>
+        <SectionTitle>
+          온라인 플레이어 목록 ({players.filter((p) => p.is_online).length}명)
+        </SectionTitle>
         <InfoText>
           게임 시작 시 보드를 완성한 플레이어에게 자동으로 순서가 부여됩니다.
         </InfoText>
         <PlayerList>
-          {players.map((player) => (
-            <PlayerItem
-              key={player.id}
-              isCurrentTurn={
-                gameState?.is_started &&
-                player.order === gameState.current_order
-              }
-            >
-              <PlayerInfo>
-                <PlayerName>
-                  {player.name} {player.is_admin && '👑'}
-                </PlayerName>
-                <PlayerScore>🏆 빙고: {player.score}줄</PlayerScore>
-                <PlayerStatus>
-                  {player.is_online ? '🟢' : '⚪'}{' '}
-                  {player.board.length === 25
-                    ? '✅ 보드 완성'
-                    : `⏳ 보드 ${player.board.length}/25`}
-                  {player.is_ready && ' | ✅ 준비완료'}
-                  {player.order > 0 && ` | 순서: ${player.order}`}
-                </PlayerStatus>
-              </PlayerInfo>
-              <PlayerActions>
-                <DeleteButton
-                  onClick={() => handleDeletePlayer(player.id, player.name)}
-                >
-                  삭제
-                </DeleteButton>
-              </PlayerActions>
-            </PlayerItem>
-          ))}
+          {players
+            .filter((p) => p.is_online)
+            .map((player) => (
+              <PlayerItem
+                key={player.id}
+                isCurrentTurn={
+                  gameState?.is_started &&
+                  player.order === gameState.current_order
+                }
+              >
+                <PlayerInfo>
+                  <PlayerName>
+                    {player.name} {player.is_admin && '👑'}
+                  </PlayerName>
+                  <PlayerScore>🏆 빙고: {player.score}줄</PlayerScore>
+                  <PlayerStatus>
+                    {player.is_online ? '🟢' : '⚪'}{' '}
+                    {player.board.length === 25
+                      ? '✅ 보드 완성'
+                      : `⏳ 보드 ${player.board.length}/25`}
+                    {player.is_ready && ' | ✅ 준비완료'}
+                    {player.order > 0 && ` | 순서: ${player.order}`}
+                  </PlayerStatus>
+                </PlayerInfo>
+                <PlayerActions>
+                  <DeleteButton
+                    onClick={() => handleDeletePlayer(player.id, player.name)}
+                  >
+                    삭제
+                  </DeleteButton>
+                </PlayerActions>
+              </PlayerItem>
+            ))}
         </PlayerList>
       </Section>
     </Container>

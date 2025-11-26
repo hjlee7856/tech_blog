@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import Image from 'next/image';
@@ -17,6 +18,8 @@ import {
   getGameState,
   getOnlinePlayersRanking,
   nextTurn,
+  resetGame,
+  startGame,
   subscribeToGameState,
   subscribeToPlayers,
   toggleReady,
@@ -29,18 +32,19 @@ import { LoginModal } from '../LoginModal';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
-  CloseButton,
   Container,
+  CountdownNumber,
+  CountdownOverlay,
+  CountdownText,
   DrawButton,
   DrawnNameDisplay,
-  DrawnResult,
-  DrawnResultName,
   GameStatus,
   Header,
   LogoutButton,
   ModalContent,
   ModalOverlay,
   ModalTitle,
+  MyRankDisplay,
   ProfileImage,
   RankingItem,
   RankingList,
@@ -67,11 +71,59 @@ export function BingoGame({
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [drawnName, setDrawnName] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [countdownType, setCountdownType] = useState<'start' | 'reset' | null>(
+    null,
+  );
+  const [showAloneModal, setShowAloneModal] = useState(false);
+
+  // 모든 플레이어가 준비되었는지 체크하고 게임 시작 카운트다운
+  useEffect(() => {
+    if (!gameState || gameState.is_started || gameState.is_finished) return;
+    // 이미 카운트다운 중이면 중복 실행 방지
+    if (countdown !== null) return;
+
+    const onlinePlayers = players.filter((p) => p.is_online);
+    const readyPlayers = onlinePlayers.filter(
+      (p) => p.is_ready && p.board.length === 25,
+    );
+
+    // 2명 이상이고 모든 온라인 플레이어가 준비 완료
+    if (
+      onlinePlayers.length >= 2 &&
+      readyPlayers.length === onlinePlayers.length
+    ) {
+      setCountdownType('start');
+      setCountdown(3);
+    }
+  }, [players, gameState, countdown]);
+
+  // 카운트다운 타이머
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown === 0) {
+      if (countdownType === 'start') {
+        void startGame();
+      } else if (countdownType === 'reset') {
+        void resetGame();
+        setShowFinishModal(false);
+      }
+      setCountdown(null);
+      setCountdownType(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown, countdownType]);
 
   // 초기 데이터 로드 및 구독
   useEffect(() => {
@@ -93,16 +145,34 @@ export function BingoGame({
 
     const gameSubscription = subscribeToGameState(async (state) => {
       setGameState(state);
-      setDrawnName(null);
       if (state.is_finished && state.winner_id) {
         const ranking = await getOnlinePlayersRanking();
         setFinalRanking(ranking);
         setShowFinishModal(true);
+        // 게임 종료 후 3초 카운트다운 시작
+        setCountdownType('reset');
+        setCountdown(3);
       }
     });
 
     const playersSubscription = subscribeToPlayers((playerList) => {
       setPlayers(playerList);
+
+      // 게임 진행 중 온라인 유저가 1명만 남으면 게임 종료
+      const onlineActivePlayers = playerList.filter(
+        (p) => p.is_online && p.order > 0,
+      );
+      if (onlineActivePlayers.length <= 1) {
+        void getGameState().then((state) => {
+          if (state?.is_started && !state.is_finished) {
+            setShowAloneModal(true);
+            void resetGame();
+            setTimeout(() => {
+              setShowAloneModal(false);
+            }, 3000);
+          }
+        });
+      }
     });
 
     return () => {
@@ -115,12 +185,31 @@ export function BingoGame({
   useEffect(() => {
     if (!user) return;
 
+    let hiddenTime: number | null = null;
+    const LOGOUT_TIMEOUT = 60 * 1000; // 1분
+
     const handleVisibilityChange = () => {
-      void updateOnlineStatus(user.id, document.visibilityState === 'visible');
+      if (document.visibilityState === 'hidden') {
+        hiddenTime = Date.now();
+      } else if (
+        document.visibilityState === 'visible' &&
+        hiddenTime !== null
+      ) {
+        const elapsed = Date.now() - hiddenTime;
+        if (elapsed >= LOGOUT_TIMEOUT) {
+          // 1분 이상 안 봤으면 로그아웃
+          void updateOnlineStatus(user.id, false);
+          logout();
+          setUser(null);
+        }
+        hiddenTime = null;
+      }
     };
 
     const handleBeforeUnload = () => {
       void updateOnlineStatus(user.id, false);
+      logout();
+      setUser(null);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -159,7 +248,6 @@ export function BingoGame({
     const result = await drawName(characterNames, gameState.drawn_names);
 
     if (result.success && result.name) {
-      setDrawnName(result.name);
       // 점수 업데이트
       const newDrawnNames = [...gameState.drawn_names, result.name];
 
@@ -244,11 +332,11 @@ export function BingoGame({
         <StatusText isStarted={gameState?.is_started ?? false}>
           {gameState?.is_started
             ? '🎮 게임 진행 중'
-            : '⏳ 게임 대기 중 - 보드를 채워주세요!'}
+            : `⏳ 게임 대기 중 - ${myPlayer?.is_ready ? '다른 유저를 기다리는 중' : '보드를 채워주세요!'}`}
         </StatusText>
         {gameState?.is_started && lastDrawnName && (
-          <DrawnNameDisplay>
-            🎲 마지막 뽑힌 이름: <strong>{lastDrawnName}</strong>
+          <DrawnNameDisplay isLatest>
+            마지막 뽑힌 이름: <strong>{lastDrawnName}</strong>
           </DrawnNameDisplay>
         )}
       </GameStatus>
@@ -274,24 +362,16 @@ export function BingoGame({
         <TurnSection>
           <TurnInfo isMyTurn={isMyTurn}>
             {isMyTurn
-              ? '🎉 당신의 차례입니다!'
-              : `${currentTurnPlayer?.name || '대기 중'}이 이름을 뽑고 있습니다.`}
+              ? '당신의 차례입니다!'
+              : `${currentTurnPlayer?.name || '대기 중'} 님이 이름을 뽑고 있습니다.`}
           </TurnInfo>
           {isMyTurn && (
-            <>
-              <DrawButton onClick={handleDrawName} disabled={isDrawing}>
-                {isDrawing ? '뽑는 중...' : '🎲 이름 뽑기'}
-              </DrawButton>
-              {drawnName && (
-                <DrawnResult>
-                  <span>뽑힌 이름:</span>
-                  <DrawnResultName>{drawnName}</DrawnResultName>
-                </DrawnResult>
-              )}
-            </>
+            <DrawButton onClick={handleDrawName} disabled={isDrawing}>
+              {isDrawing ? '뽑는 중...' : '이름 뽑기'}
+            </DrawButton>
           )}
           {!isMyTurn && myPlayer?.order === 0 && (
-            <TurnInfo>⚠️ 보드를 완성하지 않아 참가하지 못했습니다</TurnInfo>
+            <TurnInfo>보드를 완성하지 않아 참가하지 못했습니다</TurnInfo>
           )}
         </TurnSection>
       )}
@@ -324,21 +404,31 @@ export function BingoGame({
             return index + 1;
           };
 
-          const top3 = finalRanking.slice(0, 3);
-          const isWinner = top3[0]?.id === user.id;
+          // 공동 3등까지 포함하여 표시할 플레이어 목록
+          const topPlayers = finalRanking.filter((_, index) => {
+            const rank = getRank(index, finalRanking);
+            return rank <= 3;
+          });
+          const isWinner = finalRanking[0]?.id === user.id;
+
+          // 내 순위 찾기
+          const myIndex = finalRanking.findIndex((p) => p.id === user.id);
+          const myRank = myIndex !== -1 ? getRank(myIndex, finalRanking) : null;
+          const isInTop3 = myRank !== null && myRank <= 3;
 
           return (
             <ModalOverlay>
               <ModalContent>
-                <ModalTitle>🎉 게임 종료!</ModalTitle>
+                <ModalTitle>게임 종료!</ModalTitle>
                 {isWinner && (
-                  <WinnerName>
-                    🎊 축하합니다! 당신이 우승했습니다! 🎊
-                  </WinnerName>
+                  <WinnerName>축하합니다! 순위를 확인하세요!</WinnerName>
                 )}
                 <RankingList>
-                  {top3.map((player, index) => {
-                    const rank = getRank(index, finalRanking);
+                  {topPlayers.map((player) => {
+                    const playerIndex = finalRanking.findIndex(
+                      (p) => p.id === player.id,
+                    );
+                    const rank = getRank(playerIndex, finalRanking);
                     return (
                       <RankingItem
                         key={player.id}
@@ -368,13 +458,34 @@ export function BingoGame({
                     );
                   })}
                 </RankingList>
-                <CloseButton onClick={() => setShowFinishModal(false)}>
-                  닫기
-                </CloseButton>
+
+                {/* 내 순위 표시 (3등 안에 없을 때만) */}
+                {myRank !== null && !isInTop3 && (
+                  <MyRankDisplay>
+                    내 순위: {myRank}위 ({finalRanking[myIndex]?.score ?? 0}줄)
+                  </MyRankDisplay>
+                )}
+
+                {/* 카운트다운 표시 */}
+                {countdown !== null && countdownType === 'reset' && (
+                  <CountdownText
+                    style={{ marginTop: '16px', color: '#FAA61A' }}
+                  >
+                    {countdown}초 후 처음으로 돌아갑니다...
+                  </CountdownText>
+                )}
               </ModalContent>
             </ModalOverlay>
           );
         })()}
+
+      {/* 게임 시작 카운트다운 오버레이 */}
+      {countdown !== null && countdownType === 'start' && (
+        <CountdownOverlay>
+          <CountdownNumber key={countdown}>{countdown}</CountdownNumber>
+          <CountdownText>게임이 곧 시작됩니다!</CountdownText>
+        </CountdownOverlay>
+      )}
 
       {/* 프로필 변경 모달 */}
       <ProfileSelectModal
@@ -382,9 +493,24 @@ export function BingoGame({
         onClose={() => setShowProfileModal(false)}
         characterNames={characterNames}
         characterEnNames={characterEnNames}
-        currentProfile={user.profile_image || 'Nahida'}
+        currentProfile={user.profile_image || 'Aino'}
         onSelect={handleProfileChange}
       />
+
+      {/* 혼자 남음 모달 */}
+      {showAloneModal && (
+        <ModalOverlay>
+          <ModalContent>
+            <ModalTitle>게임 종료</ModalTitle>
+            <WinnerName>
+              다른 플레이어가 모두 나가서 게임이 종료되었습니다.
+            </WinnerName>
+            <CountdownText style={{ color: '#FAA61A' }}>
+              잠시 후 처음으로 돌아갑니다...
+            </CountdownText>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </Container>
   );
 }

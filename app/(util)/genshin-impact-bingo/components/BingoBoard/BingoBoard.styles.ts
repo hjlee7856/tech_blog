@@ -128,21 +128,58 @@ export const MatchedCell = styled('div', {
     gap: '2px',
     fontSize: '8px',
     fontWeight: '600',
-    backgroundColor: '#3BA55C',
-    color: 'white',
-    border: '1px solid #2D8049',
+    backgroundColor: '#1a4a2a',
+    color: '#4ade80',
+    border: '2px solid #4ade80',
     borderRadius: '4px',
     padding: '2px',
     textAlign: 'center',
     wordBreak: 'keep-all',
     lineHeight: '1.1',
     overflow: 'hidden',
+    boxShadow:
+      '0 0 8px #4ade80, 0 0 16px #4ade80, inset 0 0 8px rgba(74, 222, 128, 0.3)',
     md: {
       gap: '4px',
       fontSize: '11px',
-      border: '2px solid #2D8049',
+      border: '3px solid #4ade80',
       borderRadius: '8px',
       padding: '4px',
+      boxShadow:
+        '0 0 10px #4ade80, 0 0 20px #4ade80, 0 0 30px #4ade80, inset 0 0 10px rgba(74, 222, 128, 0.3)',
+    },
+  },
+});
+
+export const BingoLineCell = styled('div', {
+  base: {
+    aspectRatio: '1',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '2px',
+    fontSize: '8px',
+    fontWeight: '600',
+    backgroundColor: '#3d3520',
+    color: '#FFD700',
+    border: '2px solid #FFD700',
+    borderRadius: '4px',
+    padding: '2px',
+    textAlign: 'center',
+    wordBreak: 'keep-all',
+    lineHeight: '1.1',
+    overflow: 'hidden',
+    boxShadow:
+      '0 0 8px #FFD700, 0 0 16px #FFD700, inset 0 0 8px rgba(255, 215, 0, 0.3)',
+    md: {
+      gap: '4px',
+      fontSize: '11px',
+      border: '3px solid #FFD700',
+      borderRadius: '8px',
+      padding: '4px',
+      boxShadow:
+        '0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700, inset 0 0 10px rgba(255, 215, 0, 0.3)',
     },
   },
 });

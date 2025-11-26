@@ -12,28 +12,34 @@ export interface User {
 // 프로필 이미지는 영어 이름으로 DB에 저장 (e.g., "Nahida")
 // 실제 이미지 경로는 /genshin-impact/{englishName}_Avatar.webp
 
+// 기본 프로필 이미지용 캐릭터 목록 (GenshinData 번들 크기 문제로 하드코딩)
+const DEFAULT_PROFILE_NAMES = [
+  'Nahida',
+  'Furina',
+  'Raiden Shogun',
+  'Hu Tao',
+  'Ganyu',
+  'Ayaka',
+  'Zhongli',
+  'Venti',
+  'Kazuha',
+  'Yelan',
+  'Xiao',
+  'Eula',
+  'Kokomi',
+  'Yoimiya',
+  'Shenhe',
+  'Aino',
+];
+
 export function getProfileImagePath(englishName: string): string {
   const safeName = englishName.replaceAll(' ', '_').replaceAll('%20', '_');
   return `/genshin-impact/${safeName}_Avatar.webp`;
 }
 
-// 기본 프로필 이미지 (영어 이름)
-const DEFAULT_PROFILE_NAMES = [
-  'Nahida',
-  'Raiden_Shogun',
-  'Hu_Tao',
-  'Zhongli',
-  'Kaedehara_Kazuha',
-  'Kamisato_Ayaka',
-  'Ganyu',
-  'Yelan',
-  'Xiao',
-  'Furina',
-];
-
 export function getRandomProfileName(): string {
   const index = Math.floor(Math.random() * DEFAULT_PROFILE_NAMES.length);
-  return DEFAULT_PROFILE_NAMES[index] ?? 'Nahida';
+  return DEFAULT_PROFILE_NAMES[index] ?? 'Aino';
 }
 
 const STORAGE_KEY = 'genshin-bingo-user';
