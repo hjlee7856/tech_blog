@@ -511,3 +511,67 @@ export const TurnIndicator = styled('div', {
     },
   },
 });
+
+// 뽑은 이름 목록 스타일
+export const DrawnNamesSection = styled('div', {
+  base: {
+    width: '100%',
+    maxWidth: '1000px',
+    backgroundColor: '#2B2D31',
+    borderRadius: '12px',
+    padding: '16px',
+    marginTop: '16px',
+    md: {
+      padding: '20px',
+      marginTop: '24px',
+    },
+  },
+});
+
+export const DrawnNamesTitle = styled('h3', {
+  base: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#B5BAC1',
+    marginBottom: '12px',
+    md: {
+      fontSize: '16px',
+    },
+  },
+});
+
+export const DrawnNamesList = styled('div', {
+  base: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    maxHeight: '150px',
+    overflowY: 'auto',
+    md: {
+      maxHeight: '200px',
+    },
+  },
+});
+
+export const DrawnNameTag = styled('span', {
+  base: {
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#B5BAC1',
+    backgroundColor: '#3F4147',
+    borderRadius: '12px',
+    md: {
+      padding: '6px 12px',
+      fontSize: '13px',
+    },
+  },
+  variants: {
+    isLatest: {
+      true: {
+        backgroundColor: '#5865F2',
+        color: 'white',
+      },
+    },
+  },
+});

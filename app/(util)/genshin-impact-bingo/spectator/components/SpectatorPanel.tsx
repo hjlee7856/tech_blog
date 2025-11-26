@@ -20,6 +20,9 @@ import {
   CellName,
   Container,
   DrawnNameDisplay,
+  DrawnNamesList,
+  DrawnNamesSection,
+  DrawnNameTag,
   EmptyState,
   EmptyText,
   GameStatusBar,
@@ -48,6 +51,7 @@ import {
   Title,
   TurnIndicator,
 } from './SpectatorPanel.styles';
+import { DrawnNamesTitle } from '../../components/BingoGame/BingoGame.styles';
 
 // 빙고 라인 정의
 const BINGO_LINES = [
@@ -379,6 +383,25 @@ export function SpectatorPanel({
           )}
         </BoardSection>
       </MainContent>
+
+      {/* 뽑은 이름 목록 */}
+      {gameState?.is_started && gameState.drawn_names.length > 0 && (
+        <DrawnNamesSection>
+          <DrawnNamesTitle>
+            뽑은 이름 ({gameState.drawn_names.length}개)
+          </DrawnNamesTitle>
+          <DrawnNamesList>
+            {gameState.drawn_names.map((name, index) => (
+              <DrawnNameTag
+                key={`${name}-${index}`}
+                isLatest={index === gameState.drawn_names.length - 1}
+              >
+                {name}
+              </DrawnNameTag>
+            ))}
+          </DrawnNamesList>
+        </DrawnNamesSection>
+      )}
     </Container>
   );
 }
