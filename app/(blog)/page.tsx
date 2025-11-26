@@ -12,10 +12,10 @@ export const metadata: Metadata = {
     title: 'HJ의 기술블로그',
     description: 'HJ Tech Blog',
     type: 'website',
-    url: 'https://hjlee7856.com',
+    url: 'https://hj1997-tech-blog.vercel.app',
     images: [
       {
-        url: 'https://hjlee7856.com/og-image.png',
+        url: 'https://hj1997-tech-blog.vercel.app/og-image.png',
         width: 1200,
         height: 630,
       },
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     description: 'HJ Tech Blog',
     images: [
       {
-        url: 'https://hjlee7856.com/og-image.png',
+        url: 'https://hj1997-tech-blog.vercel.app/og-image.png',
         width: 1200,
         height: 630,
       },

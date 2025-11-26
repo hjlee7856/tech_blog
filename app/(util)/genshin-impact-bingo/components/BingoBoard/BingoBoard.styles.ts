@@ -199,14 +199,14 @@ export const CellImage = styled('div', {
 
 export const CellName = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     lineHeight: '1.1',
     maxWidth: '100%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'wrap',
     md: {
-      fontSize: '14px',
+      fontSize: '15px',
     },
   },
 });

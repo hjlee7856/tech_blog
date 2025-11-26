@@ -71,7 +71,7 @@ export const RankItem = styled('div', {
 
 export const RankNumber = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 'bold',
     minWidth: '20px',
     md: {
@@ -110,7 +110,7 @@ export const ProfileImage = styled('div', {
 
 export const PlayerName = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     flex: 1,
     md: {
       fontSize: '14px',
@@ -128,7 +128,7 @@ export const PlayerNameWrapper = styled('div', {
 
 export const Score = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 'bold',
     md: {
       fontSize: '14px',
@@ -148,7 +148,7 @@ export const OnlineIndicator = styled('div', {
 
 export const ReadyBadge = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 'bold',
   },
   variants: {

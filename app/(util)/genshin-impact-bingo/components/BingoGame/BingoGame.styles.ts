@@ -56,7 +56,7 @@ export const ProfileImage = styled('div', {
 export const UserName = styled('span', {
   base: {
     color: 'white',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '500',
     md: {
       fontSize: '14px',
@@ -79,7 +79,7 @@ export const LogoutButton = styled('button', {
     },
     md: {
       padding: '6px 12px',
-      fontSize: '12px',
+      fontSize: '13px',
     },
   },
 });
@@ -296,7 +296,7 @@ export const PlayerReadyBadge = styled('span', {
   base: {
     padding: '4px 10px',
     borderRadius: '20px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '500',
     md: {
       padding: '4px 12px',
