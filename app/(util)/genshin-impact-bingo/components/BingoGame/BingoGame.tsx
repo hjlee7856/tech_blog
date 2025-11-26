@@ -17,6 +17,7 @@ import {
   getAllPlayers,
   getGameState,
   getOnlinePlayersRanking,
+  joinGameInProgress,
   nextTurn,
   resetGame,
   startGame,
