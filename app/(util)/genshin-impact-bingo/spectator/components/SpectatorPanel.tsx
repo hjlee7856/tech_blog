@@ -20,7 +20,6 @@ import {
   CellName,
   Container,
   DrawnNameDisplay,
-  EmptyIcon,
   EmptyState,
   EmptyText,
   GameStatusBar,
