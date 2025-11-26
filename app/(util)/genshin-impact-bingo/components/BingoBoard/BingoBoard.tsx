@@ -25,6 +25,7 @@ interface BingoBoardProps {
   isGameStarted: boolean;
   drawnNames: string[];
   initialBoard?: string[];
+  playerOrder?: number; // 플레이어의 게임 참여 순서 (0이면 미참여)
 }
 
 export function BingoBoard({
@@ -34,6 +35,7 @@ export function BingoBoard({
   isGameStarted,
   drawnNames,
   initialBoard,
+  playerOrder = 0,
 }: BingoBoardProps) {
   const [board, setBoard] = useState<(string | null)[]>(
     initialBoard?.length === 25
@@ -96,14 +98,17 @@ export function BingoBoard({
     }
   }, [board, userId]);
 
+  // 게임 참여 전(order === 0)이면 게임 중에도 보드 수정 가능
+  const canEditBoard = !isGameStarted || playerOrder === 0;
+
   const handleCellClick = (index: number) => {
-    if (isGameStarted) return; // 게임 시작 후 수정 불가
+    if (!canEditBoard) return; // 게임 참여 후에는 수정 불가
     setSelectedCell(index);
     setIsModalOpen(true);
   };
 
   const handleSelectCharacter = (name: string) => {
-    if (selectedCell === null || isGameStarted) return;
+    if (selectedCell === null || !canEditBoard) return;
     setBoard((prev) => {
       const newBoard = [...prev];
       newBoard[selectedCell] = name;
@@ -114,7 +119,7 @@ export function BingoBoard({
   };
 
   const handleClearCell = () => {
-    if (selectedCell === null || isGameStarted) return;
+    if (selectedCell === null || !canEditBoard) return;
     setBoard((prev) => {
       const newBoard = [...prev];
       newBoard[selectedCell] = null;
@@ -125,13 +130,13 @@ export function BingoBoard({
   };
 
   const handleRandomFill = () => {
-    if (isGameStarted) return;
+    if (!canEditBoard) return;
     const shuffled = [...characterNames].toSorted(() => Math.random() - 0.5);
     setBoard(shuffled.slice(0, 25));
   };
 
   const handleClearAll = () => {
-    if (isGameStarted) return;
+    if (!canEditBoard) return;
     setBoard(Array.from<string | null>({ length: 25 }).fill(null));
   };
 
@@ -177,7 +182,7 @@ export function BingoBoard({
 
   return (
     <Container>
-      {!isGameStarted && (
+      {canEditBoard && (
         <ButtonContainer>
           <Button onClick={handleRandomFill}>랜덤 채우기</Button>
           <ClearButton onClick={handleClearAll}>전체 초기화</ClearButton>
@@ -238,7 +243,7 @@ export function BingoBoard({
             <Cell
               key={index}
               onClick={() => handleCellClick(index)}
-              style={{ cursor: isGameStarted ? 'default' : 'pointer' }}
+              style={{ cursor: canEditBoard ? 'pointer' : 'default' }}
             >
               {name ? (
                 <>
@@ -261,7 +266,7 @@ export function BingoBoard({
         })}
       </Board>
 
-      {!isGameStarted && (
+      {canEditBoard && (
         <CharacterSelectModal
           isOpen={isModalOpen}
           onClose={() => {

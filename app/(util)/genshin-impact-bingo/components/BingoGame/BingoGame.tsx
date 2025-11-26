@@ -370,6 +370,7 @@ export function BingoGame({
         userId={user.id}
         isGameStarted={gameState?.is_started ?? false}
         drawnNames={gameState?.drawn_names ?? []}
+        playerOrder={myPlayer?.order ?? 0}
       />
 
       <Ranking isGameStarted={gameState?.is_started} />
