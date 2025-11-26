@@ -200,14 +200,14 @@ export const CellImage = styled('div', {
 
 export const CellName = styled('span', {
   base: {
-    fontSize: '7px',
+    fontSize: '13px',
     lineHeight: '1.1',
     maxWidth: '100%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     md: {
-      fontSize: '10px',
+      fontSize: '15px',
     },
   },
 });
