@@ -6,7 +6,6 @@ export const Container = styled('div', {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '12px',
-    padding: '12px',
     width: '100%',
     md: {
       gap: '20px',
@@ -90,7 +89,7 @@ export const Cell = styled('button', {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '2px',
+    gap: '4px',
     fontSize: '8px',
     fontWeight: '500',
     backgroundColor: '#2B2D31',
@@ -109,7 +108,7 @@ export const Cell = styled('button', {
       borderColor: '#5865F2',
     },
     md: {
-      gap: '4px',
+      gap: '8px',
       fontSize: '11px',
       border: '2px solid #3F4147',
       borderRadius: '8px',
@@ -125,7 +124,7 @@ export const MatchedCell = styled('div', {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '2px',
+    gap: '4px',
     fontSize: '8px',
     fontWeight: '600',
     backgroundColor: '#1a4a2a',
@@ -140,7 +139,7 @@ export const MatchedCell = styled('div', {
     boxShadow:
       '0 0 8px #4ade80, 0 0 16px #4ade80, inset 0 0 8px rgba(74, 222, 128, 0.3)',
     md: {
-      gap: '4px',
+      gap: '8px',
       fontSize: '11px',
       border: '3px solid #4ade80',
       borderRadius: '8px',
@@ -158,7 +157,7 @@ export const BingoLineCell = styled('div', {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '2px',
+    gap: '4px',
     fontSize: '8px',
     fontWeight: '600',
     backgroundColor: '#3d3520',
@@ -173,7 +172,7 @@ export const BingoLineCell = styled('div', {
     boxShadow:
       '0 0 8px #FFD700, 0 0 16px #FFD700, inset 0 0 8px rgba(255, 215, 0, 0.3)',
     md: {
-      gap: '4px',
+      gap: '8px',
       fontSize: '11px',
       border: '3px solid #FFD700',
       borderRadius: '8px',
@@ -205,7 +204,7 @@ export const CellName = styled('span', {
     maxWidth: '100%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'wrap',
     md: {
       fontSize: '15px',
     },

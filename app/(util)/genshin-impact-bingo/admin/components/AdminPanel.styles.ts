@@ -225,7 +225,7 @@ export const PlayerActions = styled('div', {
 export const DeleteButton = styled('button', {
   base: {
     padding: '6px 10px',
-    fontSize: '12px',
+    fontSize: '13px',
     backgroundColor: '#ED4245',
     color: 'white',
     border: 'none',
@@ -248,7 +248,7 @@ export const PlayerInfo = styled('div', {
 
 export const PlayerScore = styled('span', {
   base: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#3BA55C',
   },
 });

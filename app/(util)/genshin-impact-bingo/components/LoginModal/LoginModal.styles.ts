@@ -146,7 +146,7 @@ export const UserName = styled('span', {
 export const LogoutButton = styled('button', {
   base: {
     padding: '6px 12px',
-    fontSize: '12px',
+    fontSize: '13px',
     backgroundColor: '#3F4147',
     color: '#B5BAC1',
     border: 'none',
