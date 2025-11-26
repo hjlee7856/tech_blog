@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { createNameMap } from '../../lib/characterUtils';
-import { saveBoard, setReadyFalse } from '../../lib/game';
+import { getPlayerBoard, saveBoard, setReadyFalse } from '../../lib/game';
 import { CharacterSelectModal } from '../CharacterSelectModal/CharacterSelectModal';
 import {
   BingoLineCell,
@@ -42,6 +42,29 @@ export function BingoBoard({
   );
   const [selectedCell, setSelectedCell] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // 컴포넌트 마운트 시 DB에서 보드 로드
+  useEffect(() => {
+    if (isLoaded) return;
+    const loadBoard = async () => {
+      const savedBoard: string[] = await getPlayerBoard(userId);
+      if (savedBoard.length === 25) {
+        setBoard(savedBoard);
+      } else if (savedBoard.length > 0) {
+        // 부분적으로 저장된 보드가 있으면 복원
+        const newBoard: (string | null)[] = Array.from<string | null>({
+          length: 25,
+        }).fill(null);
+        for (const [idx, name] of savedBoard.entries()) {
+          if (idx < 25) newBoard[idx] = name;
+        }
+        setBoard(newBoard);
+      }
+      setIsLoaded(true);
+    };
+    void loadBoard();
+  }, [userId, isLoaded]);
 
   // 한글-영어 이름 매핑
   const nameMap = useMemo(

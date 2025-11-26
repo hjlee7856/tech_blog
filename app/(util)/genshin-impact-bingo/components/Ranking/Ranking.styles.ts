@@ -9,7 +9,7 @@ export const Container = styled('div', {
     padding: '12px',
     marginTop: '16px',
     md: {
-      maxWidth: '300px',
+      maxWidth: '600px',
       padding: '16px',
       marginTop: '20px',
     },

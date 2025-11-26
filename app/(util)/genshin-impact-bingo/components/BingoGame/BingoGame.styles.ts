@@ -239,10 +239,10 @@ export const ReadySection = styled('div', {
     borderRadius: '12px',
     marginBottom: '12px',
     width: '100%',
-    maxWidth: '400px',
     md: {
       padding: '16px 24px',
       marginBottom: '16px',
+      maxWidth: '600px',
     },
   },
 });

@@ -186,44 +186,6 @@ export function BingoGame({
     };
   }, []);
 
-  // 온라인 상태 관리 (user가 설정된 후에만)
-  useEffect(() => {
-    if (!user) return;
-
-    let hiddenTime: number | null = null;
-    const LOGOUT_TIMEOUT = 60 * 1000; // 1분
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        hiddenTime = Date.now();
-      } else if (
-        document.visibilityState === 'visible' &&
-        hiddenTime !== null
-      ) {
-        const elapsed = Date.now() - hiddenTime;
-        if (elapsed >= LOGOUT_TIMEOUT) {
-          // 1분 이상 안 봤으면 오프라인
-          void updateOnlineStatus(user.id, false);
-          setUser(null);
-        }
-        hiddenTime = null;
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      void updateOnlineStatus(user.id, false);
-      setUser(null);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [user]);
-
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
     await updateOnlineStatus(loggedInUser.id, true);
@@ -283,6 +245,15 @@ export function BingoGame({
     const success = await updateProfileImage(user.id, englishName);
     if (success) {
       setUser({ ...user, profile_image: englishName });
+    }
+  };
+
+  const handleJoinGame = async () => {
+    if (!user) return;
+    const success = await joinGameInProgress(user.id);
+    if (success) {
+      const playerList = await getAllPlayers();
+      setPlayers(playerList);
     }
   };
 
@@ -373,9 +344,22 @@ export function BingoGame({
               {isDrawing ? '뽑는 중...' : '이름 뽑기'}
             </DrawButton>
           )}
-          {!isMyTurn && myPlayer?.order === 0 && (
-            <TurnInfo>보드를 완성하지 않아 참가하지 못했습니다</TurnInfo>
-          )}
+          {!isMyTurn &&
+            myPlayer?.order === 0 &&
+            myPlayer?.board.length === 25 && (
+              <>
+                <TurnInfo>게임 중간 참여가 가능합니다!</TurnInfo>
+                <DrawButton onClick={handleJoinGame}>게임 참여하기</DrawButton>
+              </>
+            )}
+          {!isMyTurn &&
+            myPlayer?.order === 0 &&
+            myPlayer?.board.length !== 25 && (
+              <TurnInfo>
+                보드를 완성하면 게임에 참여할 수 있습니다 (
+                {myPlayer?.board.length ?? 0}/25)
+              </TurnInfo>
+            )}
         </TurnSection>
       )}
 

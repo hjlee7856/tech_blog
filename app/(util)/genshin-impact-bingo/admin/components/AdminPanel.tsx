@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { autoLogin, type User } from '../../lib/auth';
 import {
   checkAndUpdateAllScores,
-  deletePlayer,
   drawName,
   getAllPlayers,
   getGameState,
   nextTurn,
   resetGame,
+  setPlayerOffline,
   startGame,
   subscribeToGameState,
   subscribeToPlayers,
@@ -85,7 +85,8 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
   }, []);
 
   const handleStartGame = async () => {
-    const result = await startGame();
+    // 어드민은 강제 시작 가능 (모든 플레이어가 준비되지 않아도 됨)
+    const result = await startGame(true);
     if (result.success) {
       const state = await getGameState();
       setGameState(state);
@@ -141,9 +142,10 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
     setDrawnName(null);
   };
 
-  const handleDeletePlayer = async (userId: number, playerName: string) => {
-    if (!confirm(`정말 "${playerName}" 플레이어를 삭제하시겠습니까?`)) return;
-    const success = await deletePlayer(userId);
+  const handleLogoffPlayer = async (userId: number, playerName: string) => {
+    if (!confirm(`정말 "${playerName}" 플레이어를 로그오프 시키겠습니까?`))
+      return;
+    const success = await setPlayerOffline(userId);
     if (success) {
       const playerList = await getAllPlayers();
       setPlayers(playerList);
@@ -292,9 +294,9 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
                 </PlayerInfo>
                 <PlayerActions>
                   <DeleteButton
-                    onClick={() => handleDeletePlayer(player.id, player.name)}
+                    onClick={() => handleLogoffPlayer(player.id, player.name)}
                   >
-                    삭제
+                    로그오프
                   </DeleteButton>
                 </PlayerActions>
               </PlayerItem>

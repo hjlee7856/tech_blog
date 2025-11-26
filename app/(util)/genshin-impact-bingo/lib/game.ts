@@ -50,37 +50,42 @@ export async function getGameState(): Promise<GameState | null> {
   return data as GameState;
 }
 
-export async function startGame(): Promise<{
+export async function startGame(forceStart = false): Promise<{
   success: boolean;
   error?: string;
 }> {
-  // 온라인이고 준비된 플레이어들에게 랜덤 순서 부여
+  // 온라인이고 보드가 완성된 플레이어들에게 랜덤 순서 부여
   const players = await getAllPlayers();
-  const readyPlayers = players.filter(
-    (p) => p.board.length === 25 && p.is_ready && p.is_online,
+  const eligiblePlayers = players.filter(
+    (p) => p.board.length === 25 && p.is_online,
   );
 
-  if (readyPlayers.length === 0) {
-    return { success: false, error: '준비된 온라인 플레이어가 없습니다.' };
-  }
-
-  // 모든 온라인 플레이어가 준비 상태인지 확인
-  const onlinePlayers = players.filter((p) => p.is_online);
-  const allReady = onlinePlayers.every((p) => p.is_ready);
-  if (!allReady) {
+  if (eligiblePlayers.length === 0) {
     return {
       success: false,
-      error: '모든 온라인 플레이어가 준비되지 않았습니다.',
+      error: '보드를 완성한 온라인 플레이어가 없습니다.',
     };
   }
 
+  // 어드민 강제 시작이 아닌 경우에만 모든 플레이어 준비 상태 확인
+  if (!forceStart) {
+    const onlinePlayers = players.filter((p) => p.is_online);
+    const allReady = onlinePlayers.every((p) => p.is_ready);
+    if (!allReady) {
+      return {
+        success: false,
+        error: '모든 온라인 플레이어가 준비되지 않았습니다.',
+      };
+    }
+  }
+
   // 랜덤 순서 생성
-  const shuffledIndices = readyPlayers
+  const shuffledIndices = eligiblePlayers
     .map((_, i) => i + 1)
     .toSorted(() => Math.random() - 0.5);
 
   // 각 플레이어에게 순서 부여
-  for (const [i, player] of readyPlayers.entries()) {
+  for (const [i, player] of eligiblePlayers.entries()) {
     const order = shuffledIndices[i];
     if (player && order !== undefined) {
       await updatePlayerOrder(player.id, order);
@@ -178,6 +183,21 @@ export async function nextTurn(totalPlayers: number): Promise<boolean> {
   return !error;
 }
 
+// 게임 중간 참여: 새로운 플레이어에게 순서 부여
+export async function joinGameInProgress(userId: number): Promise<boolean> {
+  // 현재 게임에 참여 중인 플레이어들의 최대 순서 조회
+  const players = await getAllPlayers();
+  const maxOrder = Math.max(...players.map((p) => p.order), 0);
+
+  // 새 플레이어에게 다음 순서 부여
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({ order: maxOrder + 1 })
+    .eq('id', userId);
+
+  return !error;
+}
+
 export async function getAllPlayers(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')
@@ -188,6 +208,18 @@ export async function getAllPlayers(): Promise<Player[]> {
 
   if (error) return [];
   return (data || []) as Player[];
+}
+
+// 특정 플레이어의 보드 조회
+export async function getPlayerBoard(userId: number): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('genshin-bingo-game-user')
+    .select('board')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return [];
+  return (data.board || []) as string[];
 }
 
 export async function getPlayersRanking(): Promise<Player[]> {
@@ -220,6 +252,20 @@ export async function deletePlayer(userId: number): Promise<boolean> {
   const { error } = await supabase
     .from('genshin-bingo-game-user')
     .delete()
+    .eq('id', userId);
+
+  return !error;
+}
+
+// 플레이어 로그오프 처리 (삭제 대신 오프라인으로 변경)
+export async function setPlayerOffline(userId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({
+      is_online: false,
+      is_ready: false,
+      last_seen: new Date().toISOString(),
+    })
     .eq('id', userId);
 
   return !error;
