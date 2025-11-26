@@ -2,6 +2,7 @@ import { styled } from '@/styled-system/jsx';
 
 export const Container = styled('div', {
   base: {
+    minHeight: '100vh',
     backgroundColor: '#1E1F22',
     padding: '40px 20px',
   },
@@ -33,6 +34,9 @@ export const SectionTitle = styled('h2', {
     fontWeight: 'bold',
     color: 'white',
     marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
 });
 

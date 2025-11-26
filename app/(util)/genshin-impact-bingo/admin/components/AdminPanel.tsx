@@ -165,7 +165,7 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
 
   if (!user) {
     return (
-      <Container style={{ minHeight: '100vh' }}>
+      <Container>
         <Title>⛔ 접근 권한이 없습니다</Title>
         <InfoText style={{ textAlign: 'center' }}>
           어드민 권한이 있는 계정으로 로그인해주세요.
@@ -179,7 +179,6 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
   return (
     <Container>
       <Title>🎮 빙고 어드민</Title>
-
       <Section>
         <SectionTitle>
           게임 상태:{' '}

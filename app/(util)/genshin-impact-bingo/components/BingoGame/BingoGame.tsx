@@ -29,6 +29,7 @@ import {
 } from '../../lib/game';
 import { BingoBoard } from '../BingoBoard/BingoBoard';
 import { LoginModal } from '../LoginModal';
+import { OnboardingOverlay } from '../OnboardingOverlay';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
@@ -80,6 +81,7 @@ export function BingoGame({
     null,
   );
   const [showAloneModal, setShowAloneModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const isCountdownStartingRef = useRef(false);
 
   // 모든 플레이어가 준비되었는지 체크하고 게임 시작 카운트다운
@@ -511,6 +513,11 @@ export function BingoGame({
             </CountdownText>
           </ModalContent>
         </ModalOverlay>
+      )}
+
+      {/* 온보딩 오버레이 */}
+      {showOnboarding && (
+        <OnboardingOverlay onComplete={() => setShowOnboarding(false)} />
       )}
     </Container>
   );
