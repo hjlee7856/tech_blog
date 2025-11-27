@@ -784,3 +784,154 @@ export const NameSelectItem = styled('button', {
     },
   },
 });
+
+// 게임 시작 동의 모달
+export const StartRequestModal = styled('div', {
+  base: {
+    backgroundColor: '#2B2D31',
+    borderRadius: '16px',
+    padding: '24px 16px',
+    maxWidth: '400px',
+    width: '90%',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+    md: {
+      padding: '32px',
+      maxWidth: '450px',
+    },
+  },
+});
+
+export const StartRequestTitle = styled('h3', {
+  base: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: 'white',
+    margin: 0,
+    md: {
+      fontSize: '22px',
+    },
+  },
+});
+
+export const StartRequestInfo = styled('p', {
+  base: {
+    fontSize: '14px',
+    color: '#B5BAC1',
+    margin: 0,
+    md: {
+      fontSize: '16px',
+    },
+  },
+});
+
+export const AgreedUsersList = styled('div', {
+  base: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    justifyContent: 'center',
+    padding: '12px',
+    backgroundColor: '#1E1F22',
+    borderRadius: '8px',
+    width: '100%',
+  },
+});
+
+export const AgreedUserBadge = styled('span', {
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    borderRadius: '20px',
+    fontSize: '13px',
+    fontWeight: '500',
+  },
+  variants: {
+    agreed: {
+      true: {
+        backgroundColor: '#3BA55C',
+        color: 'white',
+      },
+      false: {
+        backgroundColor: '#3F4147',
+        color: '#B5BAC1',
+      },
+    },
+  },
+});
+
+export const AgreeButton = styled('button', {
+  base: {
+    padding: '12px 32px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#3BA55C',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#2D8049',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
+    md: {
+      padding: '14px 40px',
+      fontSize: '18px',
+    },
+  },
+});
+
+export const CancelRequestButton = styled('button', {
+  base: {
+    padding: '10px 20px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#ED4245',
+    backgroundColor: 'transparent',
+    border: '1px solid #ED4245',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: 'rgba(237, 66, 69, 0.1)',
+    },
+    md: {
+      padding: '12px 24px',
+      fontSize: '16px',
+    },
+  },
+});
+
+export const RequestStartButton = styled('button', {
+  base: {
+    padding: '10px 24px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#5865F2',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#4752C4',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
+    md: {
+      padding: '12px 32px',
+      fontSize: '18px',
+    },
+  },
+});

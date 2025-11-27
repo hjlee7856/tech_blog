@@ -3,7 +3,7 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   autoLogin,
   getProfileImagePath,
@@ -12,20 +12,27 @@ import {
   type User,
 } from '../../lib/auth';
 import {
+  agreeToStartGame,
+  cancelStartRequest,
   checkAndUpdateAllScores,
+  checkAndUpdateOfflineUsers,
   checkGameFinish,
+  checkStartRequestTimeout,
   drawName,
   getAllPlayers,
   getGameState,
   getOnlinePlayersRanking,
+  heartbeat,
   joinGameInProgress,
   nextTurn,
+  requestStartGame,
   resetGame,
   startGame,
   subscribeToGameState,
   subscribeToPlayers,
   toggleReady,
   updateOnlineStatus,
+  validateStartRequest,
   type GameState,
   type Player,
 } from '../../lib/game';
@@ -35,7 +42,11 @@ import { OnboardingOverlay } from '../OnboardingOverlay';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
+  AgreeButton,
+  AgreedUserBadge,
+  AgreedUsersList,
   CancelDrawButton,
+  CancelRequestButton,
   Container,
   CountdownNumber,
   CountdownOverlay,
@@ -65,8 +76,11 @@ import {
   RankingList,
   ReadyButton,
   ReadySection,
+  RequestStartButton,
   SelectDrawButton,
-  StartGameButton,
+  StartRequestInfo,
+  StartRequestModal,
+  StartRequestTitle,
   StatusText,
   TurnInfo,
   TurnSection,
@@ -105,28 +119,31 @@ export function BingoGame({
   ); // 뽑기 모드
   const isCountdownStartingRef = useRef(false);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
+  const [showStartRequestModal, setShowStartRequestModal] = useState(false);
+  const [startRequestRemainingTime, setStartRequestRemainingTime] = useState<
+    number | null
+  >(null);
 
-  // 모든 플레이어가 준비되었는지 체크하고 게임 시작 카운트다운
+  // 시작 요청 남은 시간 계산
   useEffect(() => {
-    if (!gameState || gameState.is_started || gameState.is_finished) return;
-    // 이미 카운트다운 중이면 중복 실행 방지 (ref로 동기적 체크)
-    if (countdown !== null || isCountdownStartingRef.current) return;
-
-    const onlinePlayers = players.filter((p) => p.is_online);
-    const readyPlayers = onlinePlayers.filter(
-      (p) => p.is_ready && p.board.length === 25,
-    );
-
-    // 2명 이상이고 모든 온라인 플레이어가 준비 완료
-    if (
-      onlinePlayers.length >= 2 &&
-      readyPlayers.length === onlinePlayers.length
-    ) {
-      isCountdownStartingRef.current = true;
-      setCountdownType('start');
-      setCountdown(5);
+    if (!gameState?.start_requested_at || !gameState.start_requested_by) {
+      setStartRequestRemainingTime(null);
+      return;
     }
-  }, [players, gameState, countdown]);
+
+    const calculateRemaining = () => {
+      const requestedAt = new Date(gameState.start_requested_at!);
+      const now = new Date();
+      const elapsed = now.getTime() - requestedAt.getTime();
+      const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
+      setStartRequestRemainingTime(remaining);
+    };
+
+    calculateRemaining();
+    const interval = setInterval(calculateRemaining, 1000);
+
+    return () => clearInterval(interval);
+  }, [gameState?.start_requested_at, gameState?.start_requested_by]);
 
   // 카운트다운 타이머
   useEffect(() => {
@@ -221,6 +238,100 @@ export function BingoGame({
     };
   }, []);
 
+  // 주기적 하트비트 및 오프라인 유저 체크
+  useEffect(() => {
+    if (!user) return;
+
+    // 10초마다 하트비트 전송
+    const heartbeatInterval = setInterval(() => {
+      void heartbeat(user.id);
+    }, 10_000);
+
+    // 15초마다 오프라인 유저 체크
+    const offlineCheckInterval = setInterval(() => {
+      void checkAndUpdateOfflineUsers();
+    }, 15_000);
+
+    // 5초마다 시작 요청 타임아웃 및 유효성 체크
+    const startRequestCheckInterval = setInterval(() => {
+      void checkStartRequestTimeout();
+      void validateStartRequest();
+    }, 5000);
+
+    // 초기 하트비트
+    void heartbeat(user.id);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      clearInterval(offlineCheckInterval);
+      clearInterval(startRequestCheckInterval);
+    };
+  }, [user]);
+
+  // 창 포커스/이탈 감지
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // 창이 숨겨지면 오프라인으로 전환
+        void updateOnlineStatus(user.id, false);
+      } else if (document.visibilityState === 'visible') {
+        // 창이 다시 보이면 온라인으로 전환
+        void updateOnlineStatus(user.id, true);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      // 페이지 떠날 때 오프라인으로 전환
+      void updateOnlineStatus(user.id, false);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user]);
+
+  // 게임 시작 요청이 있을 때 모달 표시
+  useEffect(() => {
+    if (!gameState || gameState.is_started) {
+      setShowStartRequestModal(false);
+      return;
+    }
+
+    if (gameState.start_requested_by) {
+      setShowStartRequestModal(true);
+    } else {
+      setShowStartRequestModal(false);
+    }
+  }, [gameState]);
+
+  // 모든 유저가 동의하면 게임 시작
+  useEffect(() => {
+    if (!gameState || gameState.is_started || !gameState.start_requested_by)
+      return;
+
+    const readyOnlinePlayers = players.filter(
+      (p) => p.is_online && p.is_ready && p.board.length === 25,
+    );
+    const allAgreed = readyOnlinePlayers.every((p) =>
+      gameState.start_agreed_users?.includes(p.id),
+    );
+
+    if (allAgreed && readyOnlinePlayers.length >= 2) {
+      // 모든 유저가 동의했으면 카운트다운 시작
+      if (countdown === null && !isCountdownStartingRef.current) {
+        isCountdownStartingRef.current = true;
+        setCountdownType('start');
+        setCountdown(5);
+      }
+    }
+  }, [gameState, players, countdown]);
+
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
     await updateOnlineStatus(loggedInUser.id, true);
@@ -240,6 +351,29 @@ export function BingoGame({
     const playerList = await getAllPlayers();
     setPlayers(playerList);
   };
+
+  // 게임 시작 요청
+  const handleRequestStart = async () => {
+    if (!user) return;
+    const result = await requestStartGame(user.id);
+    if (!result.success) {
+      alert(result.error || '게임 시작 요청에 실패했습니다.');
+    }
+  };
+
+  // 게임 시작 동의
+  const handleAgreeStart = async () => {
+    if (!user) return;
+    const result = await agreeToStartGame(user.id);
+    if (!result.success) {
+      alert(result.error || '동의에 실패했습니다.');
+    }
+  };
+
+  // 게임 시작 요청 취소
+  const handleCancelStartRequest = useCallback(async () => {
+    await cancelStartRequest();
+  }, []);
 
   const handleDrawName = async () => {
     if (!gameState || isDrawing) return;
@@ -427,7 +561,8 @@ export function BingoGame({
           const readyPlayers = players.filter(
             (p) => p.is_online && p.is_ready && p.board.length === 25,
           );
-          const canStartGame = readyPlayers.length >= 2;
+          const canRequestStart =
+            readyPlayers.length >= 2 && myPlayer?.is_ready;
 
           return (
             <ReadySection>
@@ -442,10 +577,10 @@ export function BingoGame({
                     ? '준비 완료!'
                     : '준비하기'}
               </ReadyButton>
-              {canStartGame && (
-                <StartGameButton onClick={() => void startGame(true)}>
-                  게임 시작 ({readyPlayers.length}명 준비됨)
-                </StartGameButton>
+              {canRequestStart && !gameState?.start_requested_by && (
+                <RequestStartButton onClick={handleRequestStart}>
+                  게임 시작 요청 ({readyPlayers.length}명 준비됨)
+                </RequestStartButton>
               )}
             </ReadySection>
           );
@@ -722,6 +857,89 @@ export function BingoGame({
           </ModalContent>
         </ModalOverlay>
       )}
+
+      {/* 게임 시작 요청 모달 */}
+      {showStartRequestModal &&
+        gameState?.start_requested_by &&
+        !gameState.is_started &&
+        (() => {
+          const requester = players.find(
+            (p) => p.id === gameState.start_requested_by,
+          );
+          const readyOnlinePlayers = players.filter(
+            (p) => p.is_online && p.is_ready && p.board.length === 25,
+          );
+          const agreedUsers = gameState.start_agreed_users || [];
+          const hasAgreed = user ? agreedUsers.includes(user.id) : false;
+          const isRequester = user?.id === gameState.start_requested_by;
+
+          return (
+            <ModalOverlay>
+              <StartRequestModal>
+                <StartRequestTitle>게임 시작 요청</StartRequestTitle>
+                <StartRequestInfo>
+                  {requester?.name || '알 수 없음'}님이 게임 시작을
+                  요청했습니다.
+                </StartRequestInfo>
+                <StartRequestInfo>
+                  모든 준비된 플레이어가 동의하면 게임이 시작됩니다.
+                </StartRequestInfo>
+
+                <AgreedUsersList>
+                  {readyOnlinePlayers.map((player) => (
+                    <AgreedUserBadge
+                      key={player.id}
+                      agreed={agreedUsers.includes(player.id)}
+                    >
+                      <Image
+                        src={getProfileImagePath(
+                          player.profile_image || 'Nahida',
+                        )}
+                        alt={player.name}
+                        width={20}
+                        height={20}
+                        style={{ borderRadius: '50%' }}
+                      />
+                      {player.name}
+                      {agreedUsers.includes(player.id) ? ' ✓' : ''}
+                    </AgreedUserBadge>
+                  ))}
+                </AgreedUsersList>
+
+                <StartRequestInfo>
+                  {agreedUsers.length} / {readyOnlinePlayers.length}명 동의
+                </StartRequestInfo>
+
+                {startRequestRemainingTime !== null && (
+                  <StartRequestInfo
+                    style={{
+                      color:
+                        startRequestRemainingTime <= 10 ? '#ED4245' : '#FAA61A',
+                    }}
+                  >
+                    남은 시간: {startRequestRemainingTime}초
+                  </StartRequestInfo>
+                )}
+
+                {!hasAgreed && !isRequester && (
+                  <AgreeButton onClick={handleAgreeStart}>동의하기</AgreeButton>
+                )}
+
+                {hasAgreed && !isRequester && (
+                  <StartRequestInfo style={{ color: '#3BA55C' }}>
+                    동의 완료! 다른 플레이어를 기다리는 중...
+                  </StartRequestInfo>
+                )}
+
+                {isRequester && (
+                  <CancelRequestButton onClick={handleCancelStartRequest}>
+                    요청 취소
+                  </CancelRequestButton>
+                )}
+              </StartRequestModal>
+            </ModalOverlay>
+          );
+        })()}
 
       {/* 온보딩 오버레이 */}
       {showOnboarding && (

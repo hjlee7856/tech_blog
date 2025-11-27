@@ -9,7 +9,14 @@ export interface GameState {
   current_order: number;
   drawn_names: string[];
   created_at: string;
+  // 게임 시작 요청 관련
+  start_requested_by: number | null; // 게임 시작을 요청한 유저 ID
+  start_agreed_users: number[]; // 게임 시작에 동의한 유저 ID 목록
+  start_requested_at: string | null; // 시작 요청 시간
 }
+
+// 시작 요청 타임아웃 (60초)
+const START_REQUEST_TIMEOUT_MS = 60_000;
 
 export interface Player extends User {
   board: string[];
@@ -107,6 +114,9 @@ export async function startGame(forceStart = false): Promise<{
       winner_id: null,
       current_order: 1,
       drawn_names: [],
+      start_requested_by: null,
+      start_agreed_users: [],
+      start_requested_at: null,
     });
 
   if (stateError) return { success: false, error: stateError.message };
@@ -131,6 +141,9 @@ export async function resetGame(): Promise<boolean> {
       winner_id: null,
       current_order: 0,
       drawn_names: [],
+      start_requested_by: null,
+      start_agreed_users: [],
+      start_requested_at: null,
     });
 
   if (stateError) return false;
@@ -367,12 +380,30 @@ export async function toggleReady(userId: number): Promise<boolean> {
 
   if (!player) return false;
 
+  const newReadyState = !player.is_ready;
+
   const { error } = await supabase
     .from('genshin-bingo-game-user')
-    .update({ is_ready: !player.is_ready })
+    .update({ is_ready: newReadyState })
     .eq('id', userId);
 
-  return !error;
+  if (error) return false;
+
+  // 준비 취소 시 시작 요청 동의 목록에서도 제거
+  if (!newReadyState) {
+    const gameState = await getGameState();
+    if (gameState?.start_agreed_users?.includes(userId)) {
+      const newAgreedUsers = gameState.start_agreed_users.filter(
+        (id) => id !== userId,
+      );
+      await supabase
+        .from('genshin-bingo-game-state')
+        .update({ start_agreed_users: newAgreedUsers })
+        .eq('id', GAME_STATE_ID);
+    }
+  }
+
+  return true;
 }
 
 // 모든 플레이어 준비 상태 초기화
@@ -517,4 +548,195 @@ export function subscribeToOnlinePlayersRanking(
       },
     )
     .subscribe();
+}
+
+// 게임 시작 요청 (모든 온라인 유저의 동의 필요)
+export async function requestStartGame(
+  userId: number,
+): Promise<{ success: boolean; error?: string }> {
+  // 이미 시작 요청이 있는지 확인
+  const currentState = await getGameState();
+  if (currentState?.start_requested_by) {
+    return { success: false, error: '이미 게임 시작 요청이 진행 중입니다.' };
+  }
+
+  const players = await getAllPlayers();
+  const onlinePlayers = players.filter((p) => p.is_online);
+  const readyPlayers = onlinePlayers.filter(
+    (p) => p.is_ready && p.board.length === 25,
+  );
+
+  if (readyPlayers.length < 2) {
+    return { success: false, error: '최소 2명 이상이 준비되어야 합니다.' };
+  }
+
+  // 요청자가 준비 상태인지 확인
+  const requester = readyPlayers.find((p) => p.id === userId);
+  if (!requester) {
+    return {
+      success: false,
+      error: '게임 시작을 요청하려면 준비 상태여야 합니다.',
+    };
+  }
+
+  const { error } = await supabase
+    .from('genshin-bingo-game-state')
+    .update({
+      start_requested_by: userId,
+      start_agreed_users: [userId], // 요청자는 자동 동의
+      start_requested_at: new Date().toISOString(), // 요청 시간 기록
+    })
+    .eq('id', GAME_STATE_ID);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// 게임 시작 동의
+export async function agreeToStartGame(
+  userId: number,
+): Promise<{ success: boolean; allAgreed?: boolean; error?: string }> {
+  const gameState = await getGameState();
+  if (!gameState || !gameState.start_requested_by) {
+    return { success: false, error: '게임 시작 요청이 없습니다.' };
+  }
+
+  // 이미 동의했는지 확인
+  if (gameState.start_agreed_users.includes(userId)) {
+    return { success: true, allAgreed: false };
+  }
+
+  const newAgreedUsers = [...gameState.start_agreed_users, userId];
+
+  const { error } = await supabase
+    .from('genshin-bingo-game-state')
+    .update({ start_agreed_users: newAgreedUsers })
+    .eq('id', GAME_STATE_ID);
+
+  if (error) return { success: false, error: error.message };
+
+  // 모든 온라인 준비 유저가 동의했는지 확인
+  const players = await getAllPlayers();
+  const readyOnlinePlayers = players.filter(
+    (p) => p.is_online && p.is_ready && p.board.length === 25,
+  );
+  const allAgreed = readyOnlinePlayers.every((p) =>
+    newAgreedUsers.includes(p.id),
+  );
+
+  return { success: true, allAgreed };
+}
+
+// 게임 시작 요청 취소
+export async function cancelStartRequest(): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-state')
+    .update({
+      start_requested_by: null,
+      start_agreed_users: [],
+      start_requested_at: null,
+    })
+    .eq('id', GAME_STATE_ID);
+
+  return !error;
+}
+
+// 하트비트 - 온라인 상태 갱신 (주기적 호출용)
+export async function heartbeat(userId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({ last_seen: new Date().toISOString(), is_online: true })
+    .eq('id', userId);
+
+  return !error;
+}
+
+// 오래된 오프라인 유저 체크 (last_seen이 30초 이상 지난 유저)
+export async function checkAndUpdateOfflineUsers(): Promise<void> {
+  const players = await getAllPlayers();
+  const now = new Date();
+  const OFFLINE_THRESHOLD_MS = 30_000; // 30초
+
+  for (const player of players) {
+    if (player.is_online && player.last_seen) {
+      const lastSeen = new Date(player.last_seen);
+      const diff = now.getTime() - lastSeen.getTime();
+      if (diff > OFFLINE_THRESHOLD_MS) {
+        await updateOnlineStatus(player.id, false);
+      }
+    }
+  }
+}
+
+// 시작 요청 타임아웃 체크 및 자동 취소
+export async function checkStartRequestTimeout(): Promise<boolean> {
+  const gameState = await getGameState();
+  if (!gameState?.start_requested_by || !gameState.start_requested_at) {
+    return false;
+  }
+
+  const requestedAt = new Date(gameState.start_requested_at);
+  const now = new Date();
+  const diff = now.getTime() - requestedAt.getTime();
+
+  if (diff > START_REQUEST_TIMEOUT_MS) {
+    await cancelStartRequest();
+    return true; // 타임아웃으로 취소됨
+  }
+
+  return false;
+}
+
+// 오프라인 유저를 동의 목록에서 제외하고 시작 요청 유효성 체크
+export async function validateStartRequest(): Promise<{
+  valid: boolean;
+  cancelled: boolean;
+  reason?: string;
+}> {
+  const gameState = await getGameState();
+  if (!gameState?.start_requested_by) {
+    return { valid: false, cancelled: false, reason: '시작 요청이 없습니다.' };
+  }
+
+  const players = await getAllPlayers();
+  const readyOnlinePlayers = players.filter(
+    (p) => p.is_online && p.is_ready && p.board.length === 25,
+  );
+
+  // 요청자가 오프라인이면 요청 취소
+  const requester = players.find((p) => p.id === gameState.start_requested_by);
+  if (!requester?.is_online) {
+    await cancelStartRequest();
+    return {
+      valid: false,
+      cancelled: true,
+      reason: '요청자가 오프라인입니다.',
+    };
+  }
+
+  // 준비된 온라인 유저가 2명 미만이면 요청 취소
+  if (readyOnlinePlayers.length < 2) {
+    await cancelStartRequest();
+    return {
+      valid: false,
+      cancelled: true,
+      reason: '준비된 유저가 부족합니다.',
+    };
+  }
+
+  // 오프라인이 된 유저를 동의 목록에서 제외
+  const onlineAgreedUsers = gameState.start_agreed_users.filter((userId) => {
+    const player = players.find((p) => p.id === userId);
+    return player?.is_online && player?.is_ready && player?.board.length === 25;
+  });
+
+  // 동의 목록이 변경되었으면 업데이트
+  if (onlineAgreedUsers.length !== gameState.start_agreed_users.length) {
+    await supabase
+      .from('genshin-bingo-game-state')
+      .update({ start_agreed_users: onlineAgreedUsers })
+      .eq('id', GAME_STATE_ID);
+  }
+
+  return { valid: true, cancelled: false };
 }
