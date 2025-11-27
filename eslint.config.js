@@ -18,6 +18,7 @@ export default [
       'jsx-a11y/anchor-is-valid': 'off',
       '@typescript-eslint/naming-convention': 'off',
       'simple-import-sort/imports': 'off',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ];

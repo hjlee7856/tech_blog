@@ -1,11 +1,9 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  autoLogin,
   getProfileImagePath,
   logout,
   updateProfileImage,
@@ -15,25 +13,15 @@ import {
   agreeToStartGame,
   cancelStartRequest,
   checkAndUpdateAllScores,
-  checkAndUpdateOfflineUsers,
   checkGameFinish,
-  checkStartRequestTimeout,
   drawName,
   getAllPlayers,
-  getGameState,
   getOnlinePlayersRanking,
-  heartbeat,
   joinGameInProgress,
   nextTurn,
   requestStartGame,
-  resetGame,
-  startGame,
-  subscribeToGameState,
-  subscribeToPlayers,
   toggleReady,
   updateOnlineStatus,
-  validateStartRequest,
-  type GameState,
   type Player,
 } from '../../lib/game';
 import { BingoBoard } from '../BingoBoard/BingoBoard';
@@ -42,52 +30,41 @@ import { OnboardingOverlay } from '../OnboardingOverlay';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
-  AgreeButton,
-  AgreedUserBadge,
-  AgreedUsersList,
-  CancelDrawButton,
-  CancelRequestButton,
   Container,
   CountdownNumber,
   CountdownOverlay,
   CountdownText,
   DrawButton,
-  DrawModalButtons,
-  DrawModalContent,
-  DrawModalTitle,
   DrawnNameDisplay,
   DrawnNamesList,
   DrawnNamesSection,
   DrawnNamesTitle,
   DrawnNameTag,
-  DrawnResultName,
   GameStatus,
   Header,
   LogoutButton,
-  ModalContent,
-  ModalOverlay,
-  ModalTitle,
-  MyRankDisplay,
-  NameSelectGrid,
-  NameSelectItem,
   ProfileImage,
-  RandomDrawButton,
-  RankingItem,
-  RankingList,
   ReadyButton,
   ReadySection,
   RequestStartButton,
-  SelectDrawButton,
-  StartRequestInfo,
-  StartRequestModal,
-  StartRequestTitle,
   StatusText,
   TurnInfo,
   TurnSection,
   UserInfo,
   UserName,
-  WinnerName,
 } from './BingoGame.styles';
+import {
+  useCountdown,
+  useGameData,
+  useOnlineStatus,
+  useStartRequest,
+} from './hooks';
+import {
+  AloneModal,
+  DrawModal,
+  FinishModal,
+  StartRequestModal,
+} from './modals';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -98,239 +75,56 @@ export function BingoGame({
   characterNames,
   characterEnNames,
 }: BingoGameProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // 모달 상태
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [countdownType, setCountdownType] = useState<'start' | 'reset' | null>(
-    null,
-  );
   const [showAloneModal, setShowAloneModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showDrawModal, setShowDrawModal] = useState(false);
-  const [drawnResult, setDrawnResult] = useState<string | null>(null); // 뽑은 결과
+  const [drawnResult, setDrawnResult] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<'select' | 'random' | 'list'>(
     'select',
-  ); // 뽑기 모드
-  const isCountdownStartingRef = useRef(false);
+  );
+  const [isDrawing, setIsDrawing] = useState(false);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
-  const [showStartRequestModal, setShowStartRequestModal] = useState(false);
-  const [startRequestRemainingTime, setStartRequestRemainingTime] = useState<
-    number | null
-  >(null);
 
-  // 시작 요청 남은 시간 계산
-  useEffect(() => {
-    if (!gameState?.start_requested_at || !gameState.start_requested_by) {
-      setStartRequestRemainingTime(null);
-      return;
-    }
+  // 카운트다운 훅
+  const {
+    countdown,
+    countdownType,
+    isCountdownStartingRef,
+    setCountdown,
+    setCountdownType,
+    startCountdown,
+  } = useCountdown(() => setShowFinishModal(false));
 
-    const calculateRemaining = () => {
-      const requestedAt = new Date(gameState.start_requested_at!);
-      const now = new Date();
-      const elapsed = now.getTime() - requestedAt.getTime();
-      const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
-      setStartRequestRemainingTime(remaining);
-    };
-
-    calculateRemaining();
-    const interval = setInterval(calculateRemaining, 1000);
-
-    return () => clearInterval(interval);
-  }, [gameState?.start_requested_at, gameState?.start_requested_by]);
-
-  // 카운트다운 타이머
-  useEffect(() => {
-    if (countdown === null) return;
-
-    if (countdown === 0) {
-      if (countdownType === 'start') {
-        void startGame();
-      } else if (countdownType === 'reset') {
-        void resetGame();
-        setShowFinishModal(false);
-      }
-      setCountdown(null);
-      setCountdownType(null);
-      isCountdownStartingRef.current = false;
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setCountdown((prev) => (prev !== null ? prev - 1 : null));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown, countdownType]);
-
-  // 초기 데이터 로드 및 구독
-  useEffect(() => {
-    const init = async () => {
-      const [authResult, state, playerList] = await Promise.all([
-        autoLogin(),
-        getGameState(),
-        getAllPlayers(),
-      ]);
-      if (authResult.success && authResult.user) {
-        setUser(authResult.user);
-        await updateOnlineStatus(authResult.user.id, true);
-      }
-      setGameState(state);
-      setPlayers(playerList);
-      setIsLoading(false);
-    };
-    void init();
-
-    const gameSubscription = subscribeToGameState(async (state) => {
-      setGameState(state);
-      if (state.is_finished && state.winner_id) {
-        const ranking = await getOnlinePlayersRanking();
+  // 게임 데이터 훅
+  const { user, setUser, gameState, players, setPlayers, isLoading } =
+    useGameData({
+      onGameFinish: (ranking) => {
         setFinalRanking(ranking);
         setShowFinishModal(true);
-        // 게임 종료 후 5초 카운트다운 시작
         setCountdownType('reset');
         setCountdown(5);
-      }
+      },
+      onAloneInGame: () => {
+        setShowAloneModal(true);
+        setTimeout(() => setShowAloneModal(false), 3000);
+      },
     });
 
-    const playersSubscription = subscribeToPlayers((playerList) => {
-      setPlayers(playerList);
+  // 온라인 상태 관리 훅
+  useOnlineStatus(user?.id);
 
-      // 게임 진행 중 온라인 유저가 1명만 남으면 게임 종료
-      const onlineActivePlayers = playerList.filter(
-        (p) => p.is_online && p.order > 0,
-      );
-      if (onlineActivePlayers.length <= 1) {
-        void getGameState().then((state) => {
-          if (state?.is_started && !state.is_finished) {
-            setShowAloneModal(true);
-            void resetGame();
-            setTimeout(() => {
-              setShowAloneModal(false);
-            }, 3000);
-          }
-        });
-        return;
-      }
-
-      // 현재 턴인 플레이어가 오프라인이면 다음 턴으로 자동 넘김
-      void getGameState().then((state) => {
-        if (state?.is_started && !state.is_finished) {
-          const currentTurnPlayer = playerList.find(
-            (p) => p.order === state.current_order,
-          );
-          if (currentTurnPlayer && !currentTurnPlayer.is_online) {
-            void nextTurn();
-          }
-        }
-      });
-    });
-
-    return () => {
-      void gameSubscription.unsubscribe();
-      void playersSubscription.unsubscribe();
-    };
-  }, []);
-
-  // 주기적 하트비트 및 오프라인 유저 체크
-  useEffect(() => {
-    if (!user) return;
-
-    // 10초마다 하트비트 전송
-    const heartbeatInterval = setInterval(() => {
-      void heartbeat(user.id);
-    }, 10_000);
-
-    // 15초마다 오프라인 유저 체크
-    const offlineCheckInterval = setInterval(() => {
-      void checkAndUpdateOfflineUsers();
-    }, 15_000);
-
-    // 5초마다 시작 요청 타임아웃 및 유효성 체크
-    const startRequestCheckInterval = setInterval(() => {
-      void checkStartRequestTimeout();
-      void validateStartRequest();
-    }, 5000);
-
-    // 초기 하트비트
-    void heartbeat(user.id);
-
-    return () => {
-      clearInterval(heartbeatInterval);
-      clearInterval(offlineCheckInterval);
-      clearInterval(startRequestCheckInterval);
-    };
-  }, [user]);
-
-  // 창 포커스/이탈 감지
-  useEffect(() => {
-    if (!user) return;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        // 창이 숨겨지면 오프라인으로 전환
-        void updateOnlineStatus(user.id, false);
-      } else if (document.visibilityState === 'visible') {
-        // 창이 다시 보이면 온라인으로 전환
-        void updateOnlineStatus(user.id, true);
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      // 페이지 떠날 때 오프라인으로 전환
-      void updateOnlineStatus(user.id, false);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [user]);
-
-  // 게임 시작 요청이 있을 때 모달 표시
-  useEffect(() => {
-    if (!gameState || gameState.is_started) {
-      setShowStartRequestModal(false);
-      return;
-    }
-
-    if (gameState.start_requested_by) {
-      setShowStartRequestModal(true);
-    } else {
-      setShowStartRequestModal(false);
-    }
-  }, [gameState]);
-
-  // 모든 유저가 동의하면 게임 시작
-  useEffect(() => {
-    if (!gameState || gameState.is_started || !gameState.start_requested_by)
-      return;
-
-    const readyOnlinePlayers = players.filter(
-      (p) => p.is_online && p.is_ready && p.board.length === 25,
-    );
-    const allAgreed = readyOnlinePlayers.every((p) =>
-      gameState.start_agreed_users?.includes(p.id),
-    );
-
-    if (allAgreed && readyOnlinePlayers.length >= 2) {
-      // 모든 유저가 동의했으면 카운트다운 시작
-      if (countdown === null && !isCountdownStartingRef.current) {
-        isCountdownStartingRef.current = true;
-        setCountdownType('start');
-        setCountdown(5);
-      }
-    }
-  }, [gameState, players, countdown]);
+  // 시작 요청 훅
+  const { showStartRequestModal, startRequestRemainingTime } = useStartRequest({
+    gameState,
+    players,
+    countdown,
+    isCountdownStartingRef,
+    onStartCountdown: () => startCountdown('start', 5),
+  });
 
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
@@ -651,179 +445,33 @@ export function BingoGame({
       <Ranking isGameStarted={gameState?.is_started} />
 
       {/* 이름 뽑기 모달 */}
-      {gameState?.is_started &&
-        showDrawModal &&
-        (() => {
-          // 남은 이름 목록 계산
-          const remainingNames = characterNames.filter(
-            (name) => !gameState?.drawn_names.includes(name),
-          );
-          // 내 보드에 있는 이름
-          const myBoardNames = new Set(myPlayer?.board || []);
-
-          return (
-            <ModalOverlay>
-              <DrawModalContent
-                onClick={(e: React.MouseEvent) => e.stopPropagation()}
-              >
-                {drawnResult ? (
-                  <>
-                    <DrawModalTitle>뽑은 이름</DrawModalTitle>
-                    <DrawnResultName style={{ fontSize: '32px' }}>
-                      {drawnResult}
-                    </DrawnResultName>
-                    <CancelDrawButton
-                      onClick={() => {
-                        setShowDrawModal(false);
-                        setDrawnResult(null);
-                        setDrawMode('select');
-                      }}
-                    >
-                      닫기
-                    </CancelDrawButton>
-                  </>
-                ) : drawMode === 'select' ? (
-                  <>
-                    <DrawModalTitle>당신의 차례입니다!</DrawModalTitle>
-                    <DrawModalButtons>
-                      <RandomDrawButton
-                        onClick={() => void handleDrawName()}
-                        disabled={isDrawing}
-                      >
-                        {isDrawing ? '뽑는 중...' : '랜덤으로 뽑기'}
-                      </RandomDrawButton>
-                      <SelectDrawButton
-                        onClick={() => setDrawMode('list')}
-                        disabled={isDrawing}
-                      >
-                        선택해서 뽑기
-                      </SelectDrawButton>
-                    </DrawModalButtons>
-                  </>
-                ) : (
-                  <>
-                    <DrawModalTitle>
-                      이름 선택 ({remainingNames.length}개 남음)
-                    </DrawModalTitle>
-                    <p
-                      style={{ fontSize: '12px', color: '#FFD700', margin: 0 }}
-                    >
-                      ⭐ 금색은 내 보드에 있는 이름
-                    </p>
-                    <NameSelectGrid>
-                      {remainingNames.map((name) => (
-                        <NameSelectItem
-                          key={name}
-                          isInMyBoard={myBoardNames.has(name)}
-                          onClick={() => void handleSelectDraw(name)}
-                          disabled={isDrawing}
-                        >
-                          {name}
-                        </NameSelectItem>
-                      ))}
-                    </NameSelectGrid>
-                    <CancelDrawButton onClick={() => setDrawMode('select')}>
-                      뒤로
-                    </CancelDrawButton>
-                  </>
-                )}
-              </DrawModalContent>
-            </ModalOverlay>
-          );
-        })()}
+      <DrawModal
+        isOpen={!!gameState?.is_started && showDrawModal}
+        drawnResult={drawnResult}
+        drawMode={drawMode}
+        isDrawing={isDrawing}
+        remainingNames={characterNames.filter(
+          (name) => !gameState?.drawn_names.includes(name),
+        )}
+        myBoardNames={new Set(myPlayer?.board || [])}
+        onClose={() => {
+          setShowDrawModal(false);
+          setDrawnResult(null);
+          setDrawMode('select');
+        }}
+        onRandomDraw={() => void handleDrawName()}
+        onSelectDraw={(name) => void handleSelectDraw(name)}
+        onSetDrawMode={setDrawMode}
+      />
 
       {/* 게임 종료 모달 */}
-      {showFinishModal &&
-        (() => {
-          // 공동 순위 계산
-          const getRank = (index: number, players: Player[]) => {
-            if (index === 0) return 1;
-            const prevPlayer = players[index - 1];
-            const currentPlayer = players[index];
-            if (
-              prevPlayer &&
-              currentPlayer &&
-              prevPlayer.score === currentPlayer.score
-            ) {
-              return getRank(index - 1, players);
-            }
-            return index + 1;
-          };
-
-          // 공동 3등까지 포함하여 표시할 플레이어 목록
-          const topPlayers = finalRanking.filter((_, index) => {
-            const rank = getRank(index, finalRanking);
-            return rank <= 3;
-          });
-          const isWinner = finalRanking[0]?.id === user.id;
-
-          // 내 순위 찾기
-          const myIndex = finalRanking.findIndex((p) => p.id === user.id);
-          const myRank = myIndex !== -1 ? getRank(myIndex, finalRanking) : null;
-          const isInTop3 = myRank !== null && myRank <= 3;
-
-          return (
-            <ModalOverlay>
-              <ModalContent>
-                <ModalTitle>게임 종료!</ModalTitle>
-                {isWinner && (
-                  <WinnerName>축하합니다! 순위를 확인하세요!</WinnerName>
-                )}
-                <RankingList>
-                  {topPlayers.map((player) => {
-                    const playerIndex = finalRanking.findIndex(
-                      (p) => p.id === player.id,
-                    );
-                    const rank = getRank(playerIndex, finalRanking);
-                    return (
-                      <RankingItem
-                        key={player.id}
-                        rank={rank <= 3 ? (rank as 1 | 2 | 3) : undefined}
-                      >
-                        <span
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
-                          <Image
-                            src={getProfileImagePath(
-                              player.profile_image || 'Nahida',
-                            )}
-                            alt={player.name}
-                            width={24}
-                            height={24}
-                            style={{ borderRadius: '50%' }}
-                          />
-                          {player.name}
-                        </span>
-                        <span>{player.score}줄</span>
-                      </RankingItem>
-                    );
-                  })}
-                </RankingList>
-
-                {/* 내 순위 표시 (3등 안에 없을 때만) */}
-                {myRank !== null && !isInTop3 && (
-                  <MyRankDisplay>
-                    내 순위: {myRank}위 ({finalRanking[myIndex]?.score ?? 0}줄)
-                  </MyRankDisplay>
-                )}
-
-                {/* 카운트다운 표시 */}
-                {countdown !== null && countdownType === 'reset' && (
-                  <CountdownText
-                    style={{ marginTop: '16px', color: '#FAA61A' }}
-                  >
-                    {countdown}초 후 처음으로 돌아갑니다...
-                  </CountdownText>
-                )}
-              </ModalContent>
-            </ModalOverlay>
-          );
-        })()}
+      <FinishModal
+        isOpen={showFinishModal}
+        finalRanking={finalRanking}
+        userId={user.id}
+        countdown={countdown}
+        countdownType={countdownType}
+      />
 
       {/* 게임 시작 카운트다운 오버레이 */}
       {countdown !== null && countdownType === 'start' && (
@@ -844,102 +492,31 @@ export function BingoGame({
       />
 
       {/* 혼자 남음 모달 */}
-      {showAloneModal && (
-        <ModalOverlay>
-          <ModalContent>
-            <ModalTitle>게임 종료</ModalTitle>
-            <WinnerName>
-              다른 플레이어가 모두 나가서 게임이 종료되었습니다.
-            </WinnerName>
-            <CountdownText style={{ color: '#FAA61A' }}>
-              잠시 후 처음으로 돌아갑니다...
-            </CountdownText>
-          </ModalContent>
-        </ModalOverlay>
-      )}
+      <AloneModal isOpen={showAloneModal} />
 
       {/* 게임 시작 요청 모달 */}
-      {showStartRequestModal &&
-        gameState?.start_requested_by &&
-        !gameState.is_started &&
-        (() => {
-          const requester = players.find(
-            (p) => p.id === gameState.start_requested_by,
-          );
-          const readyOnlinePlayers = players.filter(
-            (p) => p.is_online && p.is_ready && p.board.length === 25,
-          );
-          const agreedUsers = gameState.start_agreed_users || [];
-          const hasAgreed = user ? agreedUsers.includes(user.id) : false;
-          const isRequester = user?.id === gameState.start_requested_by;
-
-          return (
-            <ModalOverlay>
-              <StartRequestModal>
-                <StartRequestTitle>게임 시작 요청</StartRequestTitle>
-                <StartRequestInfo>
-                  {requester?.name || '알 수 없음'}님이 게임 시작을
-                  요청했습니다.
-                </StartRequestInfo>
-                <StartRequestInfo>
-                  모든 준비된 플레이어가 동의하면 게임이 시작됩니다.
-                </StartRequestInfo>
-
-                <AgreedUsersList>
-                  {readyOnlinePlayers.map((player) => (
-                    <AgreedUserBadge
-                      key={player.id}
-                      agreed={agreedUsers.includes(player.id)}
-                    >
-                      <Image
-                        src={getProfileImagePath(
-                          player.profile_image || 'Nahida',
-                        )}
-                        alt={player.name}
-                        width={20}
-                        height={20}
-                        style={{ borderRadius: '50%' }}
-                      />
-                      {player.name}
-                      {agreedUsers.includes(player.id) ? ' ✓' : ''}
-                    </AgreedUserBadge>
-                  ))}
-                </AgreedUsersList>
-
-                <StartRequestInfo>
-                  {agreedUsers.length} / {readyOnlinePlayers.length}명 동의
-                </StartRequestInfo>
-
-                {startRequestRemainingTime !== null && (
-                  <StartRequestInfo
-                    style={{
-                      color:
-                        startRequestRemainingTime <= 10 ? '#ED4245' : '#FAA61A',
-                    }}
-                  >
-                    남은 시간: {startRequestRemainingTime}초
-                  </StartRequestInfo>
-                )}
-
-                {!hasAgreed && !isRequester && (
-                  <AgreeButton onClick={handleAgreeStart}>동의하기</AgreeButton>
-                )}
-
-                {hasAgreed && !isRequester && (
-                  <StartRequestInfo style={{ color: '#3BA55C' }}>
-                    동의 완료! 다른 플레이어를 기다리는 중...
-                  </StartRequestInfo>
-                )}
-
-                {isRequester && (
-                  <CancelRequestButton onClick={handleCancelStartRequest}>
-                    요청 취소
-                  </CancelRequestButton>
-                )}
-              </StartRequestModal>
-            </ModalOverlay>
-          );
-        })()}
+      <StartRequestModal
+        isOpen={
+          showStartRequestModal &&
+          !!gameState?.start_requested_by &&
+          !gameState.is_started
+        }
+        requesterName={
+          players.find((p) => p.id === gameState?.start_requested_by)?.name ||
+          '알 수 없음'
+        }
+        readyOnlinePlayers={players.filter(
+          (p) => p.is_online && p.is_ready && p.board.length === 25,
+        )}
+        agreedUsers={gameState?.start_agreed_users || []}
+        hasAgreed={
+          user ? (gameState?.start_agreed_users || []).includes(user.id) : false
+        }
+        isRequester={user?.id === gameState?.start_requested_by}
+        remainingTime={startRequestRemainingTime}
+        onAgree={handleAgreeStart}
+        onCancel={handleCancelStartRequest}
+      />
 
       {/* 온보딩 오버레이 */}
       {showOnboarding && (
