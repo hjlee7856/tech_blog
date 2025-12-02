@@ -17,6 +17,7 @@ import {
   getOnlinePlayersRanking,
   joinGameInProgress,
   nextTurn,
+  startGame,
   toggleReady,
   updateOnlineStatus,
   type Player,
@@ -27,9 +28,6 @@ import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
   Container,
-  CountdownNumber,
-  CountdownOverlay,
-  CountdownText,
   DrawButton,
   DrawnNameDisplay,
   DrawnNamesList,
@@ -48,6 +46,7 @@ import {
   UserInfo,
   UserName,
 } from './BingoGame.styles';
+
 import { useCountdown, useGameData, useOnlineStatus } from './hooks';
 import { AloneModal, DrawModal, FinishModal } from './modals';
 
@@ -73,15 +72,9 @@ export function BingoGame({
   const [isDrawing, setIsDrawing] = useState(false);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
-  // 카운트다운 훅
-  const {
-    countdown,
-    countdownType,
-    isCountdownStartingRef,
-    setCountdown,
-    setCountdownType,
-    startCountdown,
-  } = useCountdown(() => setShowFinishModal(false));
+  // 카운트다운 훅 (게임 종료 후 리셋용)
+  const { countdown, countdownType, setCountdown, setCountdownType } =
+    useCountdown(() => setShowFinishModal(false));
 
   // 콜백 메모이제이션 (재구독 방지)
   const handleGameFinish = useCallback(
@@ -114,19 +107,23 @@ export function BingoGame({
   // 온라인 상태 관리 훅
   useOnlineStatus(user?.id);
 
-  // 2명 이상 준비 시 자동 시작
+  // 2명 이상 준비 시 바로 시작
+  const isStartingRef = useRef(false);
   useEffect(() => {
     if (!gameState || gameState.is_started) return;
-    if (countdown !== null || isCountdownStartingRef.current) return;
+    if (isStartingRef.current) return;
 
     const readyOnlinePlayers = players.filter(
       (p) => p.is_online && p.is_ready && p.board.length === 25,
     );
 
     if (readyOnlinePlayers.length >= 2) {
-      startCountdown('start', 5);
+      isStartingRef.current = true;
+      void startGame().finally(() => {
+        isStartingRef.current = false;
+      });
     }
-  }, [gameState, players, countdown, isCountdownStartingRef, startCountdown]);
+  }, [gameState, players]);
 
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
@@ -181,6 +178,13 @@ export function BingoGame({
       if (activePlayers.length > 0) {
         await nextTurn(activePlayers.length);
       }
+
+      // 2초 후 자동 닫기
+      setTimeout(() => {
+        setShowDrawModal(false);
+        setDrawnResult(null);
+        setDrawMode('select');
+      }, 2000);
     } else {
       alert(result.error || '이름 뽑기에 실패했습니다.');
       setShowDrawModal(false);
@@ -246,6 +250,13 @@ export function BingoGame({
       if (activePlayers.length > 0) {
         await nextTurn(activePlayers.length);
       }
+
+      // 2초 후 자동 닫기
+      setTimeout(() => {
+        setShowDrawModal(false);
+        setDrawnResult(null);
+        setDrawMode('select');
+      }, 2000);
     } else {
       alert('이름 뽑기에 실패했습니다.');
       setShowDrawModal(false);
@@ -437,14 +448,6 @@ export function BingoGame({
         countdown={countdown}
         countdownType={countdownType}
       />
-
-      {/* 게임 시작 카운트다운 오버레이 */}
-      {countdown !== null && countdownType === 'start' && (
-        <CountdownOverlay>
-          <CountdownNumber key={countdown}>{countdown}</CountdownNumber>
-          <CountdownText>게임이 곧 시작됩니다!</CountdownText>
-        </CountdownOverlay>
-      )}
 
       {/* 프로필 변경 모달 */}
       <ProfileSelectModal
