@@ -9,6 +9,7 @@ import {
   updateProfileImage,
   type User,
 } from '../../lib/auth';
+import { createNameMap } from '../../lib/characterUtils';
 import {
   checkAndUpdateAllScores,
   checkGameFinish,
@@ -47,7 +48,7 @@ import {
   UserName,
 } from './BingoGame.styles';
 
-import { useCountdown, useGameData, useOnlineStatus } from './hooks';
+import { useGameData, useOnlineStatus } from './hooks';
 import { AloneModal, DrawModal, FinishModal } from './modals';
 
 interface BingoGameProps {
@@ -72,20 +73,11 @@ export function BingoGame({
   const [isDrawing, setIsDrawing] = useState(false);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
-  // 카운트다운 훅 (게임 종료 후 리셋용)
-  const { countdown, countdownType, setCountdown, setCountdownType } =
-    useCountdown(() => setShowFinishModal(false));
-
   // 콜백 메모이제이션 (재구독 방지)
-  const handleGameFinish = useCallback(
-    (ranking: Player[]) => {
-      setFinalRanking(ranking);
-      setShowFinishModal(true);
-      setCountdownType('reset');
-      setCountdown(5);
-    },
-    [setCountdownType, setCountdown],
-  );
+  const handleGameFinish = useCallback((ranking: Player[]) => {
+    setFinalRanking(ranking);
+    setShowFinishModal(true);
+  }, []);
 
   const handleAloneInGame = useCallback(() => {
     setShowAloneModal(true);
@@ -103,6 +95,12 @@ export function BingoGame({
 
   const { user, setUser, gameState, players, setPlayers, isLoading } =
     useGameData(gameDataCallbacks);
+
+  // 한글-영어 이름 매핑
+  const nameMap = useMemo(
+    () => createNameMap(characterNames, characterEnNames),
+    [characterNames, characterEnNames],
+  );
 
   // 온라인 상태 관리 훅
   useOnlineStatus(user?.id);
@@ -430,6 +428,7 @@ export function BingoGame({
           (name) => !gameState?.drawn_names.includes(name),
         )}
         myBoardNames={new Set(myPlayer?.board || [])}
+        nameMap={nameMap}
         onClose={() => {
           setShowDrawModal(false);
           setDrawnResult(null);
@@ -445,8 +444,8 @@ export function BingoGame({
         isOpen={showFinishModal}
         finalRanking={finalRanking}
         userId={user.id}
-        countdown={countdown}
-        countdownType={countdownType}
+        isAdmin={user.is_admin}
+        onReset={() => setShowFinishModal(false)}
       />
 
       {/* 프로필 변경 모달 */}

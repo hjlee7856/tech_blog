@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { getProfileImagePath } from '../../../lib/auth';
-import type { Player } from '../../../lib/game';
+import { resetGame, type Player } from '../../../lib/game';
 import {
   CountdownText,
   ModalContent,
@@ -11,6 +11,7 @@ import {
   MyRankDisplay,
   RankingItem,
   RankingList,
+  ResetButton,
   WinnerName,
 } from '../BingoGame.styles';
 
@@ -18,8 +19,8 @@ interface FinishModalProps {
   isOpen: boolean;
   finalRanking: Player[];
   userId: number;
-  countdown: number | null;
-  countdownType: 'start' | 'reset' | null;
+  isAdmin: boolean;
+  onReset: () => void;
 }
 
 function getRank(index: number, players: Player[]): number {
@@ -36,8 +37,8 @@ export function FinishModal({
   isOpen,
   finalRanking,
   userId,
-  countdown,
-  countdownType,
+  isAdmin,
+  onReset,
 }: FinishModalProps) {
   if (!isOpen) return null;
 
@@ -91,9 +92,21 @@ export function FinishModal({
           </MyRankDisplay>
         )}
 
-        {countdown !== null && countdownType === 'reset' && (
-          <CountdownText style={{ marginTop: '16px', color: '#FAA61A' }}>
-            {countdown}초 후 처음으로 돌아갑니다...
+        {isAdmin && (
+          <ResetButton
+            onClick={() => {
+              void resetGame();
+              onReset();
+            }}
+            style={{ marginTop: '16px' }}
+          >
+            게임 초기화
+          </ResetButton>
+        )}
+
+        {!isAdmin && (
+          <CountdownText style={{ marginTop: '16px', color: '#888' }}>
+            관리자가 게임을 초기화할 때까지 대기 중...
           </CountdownText>
         )}
       </ModalContent>

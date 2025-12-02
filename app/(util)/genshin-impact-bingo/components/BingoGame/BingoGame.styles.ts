@@ -750,7 +750,12 @@ export const NameSelectGrid = styled('div', {
 
 export const NameSelectItem = styled('button', {
   base: {
-    padding: '8px 4px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '8px',
     fontSize: '12px',
     fontWeight: '500',
     color: 'white',
@@ -766,7 +771,7 @@ export const NameSelectItem = styled('button', {
       borderColor: '#5865F2',
     },
     md: {
-      padding: '10px 8px',
+      padding: '10px 12px',
       fontSize: '13px',
     },
   },
@@ -781,6 +786,29 @@ export const NameSelectItem = styled('button', {
           borderColor: '#FFD700',
         },
       },
+    },
+  },
+});
+
+export const SearchInput = styled('input', {
+  base: {
+    width: '100%',
+    padding: '12px 16px',
+    fontSize: '14px',
+    color: 'white',
+    backgroundColor: '#1E1F22',
+    border: '2px solid #3F4147',
+    borderRadius: '8px',
+    outline: 'none',
+    transition: 'border-color 0.2s',
+    _focus: {
+      borderColor: '#5865F2',
+    },
+    _placeholder: {
+      color: '#72767D',
+    },
+    md: {
+      fontSize: '16px',
     },
   },
 });
@@ -931,6 +959,27 @@ export const RequestStartButton = styled('button', {
     },
     md: {
       padding: '12px 32px',
+      fontSize: '18px',
+    },
+  },
+});
+
+export const ResetButton = styled('button', {
+  base: {
+    padding: '12px 32px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#ED4245',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#C73E3A',
+    },
+    md: {
+      padding: '14px 40px',
       fontSize: '18px',
     },
   },

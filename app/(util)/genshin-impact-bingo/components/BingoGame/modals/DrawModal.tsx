@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import { useState } from 'react';
 import {
   CancelDrawButton,
   DrawModalButtons,
@@ -10,6 +12,7 @@ import {
   NameSelectGrid,
   NameSelectItem,
   RandomDrawButton,
+  SearchInput,
   SelectDrawButton,
 } from '../BingoGame.styles';
 
@@ -20,6 +23,7 @@ interface DrawModalProps {
   isDrawing: boolean;
   remainingNames: string[];
   myBoardNames: Set<string>;
+  nameMap: Map<string, string>;
   onClose: () => void;
   onRandomDraw: () => void;
   onSelectDraw: (name: string) => void;
@@ -33,12 +37,26 @@ export function DrawModal({
   isDrawing,
   remainingNames,
   myBoardNames,
+  nameMap,
   onClose,
   onRandomDraw,
   onSelectDraw,
   onSetDrawMode,
 }: DrawModalProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const getImagePath = (koreanName: string) => {
+    const englishName = nameMap.get(koreanName);
+    if (!englishName) return '/genshin-impact/Aino_Avatar.webp';
+    const safeName = englishName.replaceAll(' ', '_').replaceAll('%20', '_');
+    return `/genshin-impact/${safeName}_Avatar.webp`;
+  };
+
   if (!isOpen) return null;
+
+  const filteredNames = remainingNames.filter((name) =>
+    name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   return (
     <ModalOverlay>
@@ -69,24 +87,46 @@ export function DrawModal({
         ) : (
           <>
             <DrawModalTitle>
-              이름 선택 ({remainingNames.length}개 남음)
+              이름 선택 ({filteredNames.length}/{remainingNames.length}개)
             </DrawModalTitle>
+            <SearchInput
+              type="text"
+              placeholder="캐릭터 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
+            />
             <p style={{ fontSize: '12px', color: '#FFD700', margin: 0 }}>
               ⭐ 금색은 내 보드에 있는 이름
             </p>
             <NameSelectGrid>
-              {remainingNames.map((name) => (
+              {filteredNames.map((name) => (
                 <NameSelectItem
                   key={name}
                   isInMyBoard={myBoardNames.has(name)}
-                  onClick={() => onSelectDraw(name)}
+                  onClick={() => {
+                    onSelectDraw(name);
+                    setSearchTerm('');
+                  }}
                   disabled={isDrawing}
                 >
-                  {name}
+                  <Image
+                    src={getImagePath(name)}
+                    alt={name}
+                    width={32}
+                    height={32}
+                    style={{ borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                  <span>{name}</span>
                 </NameSelectItem>
               ))}
             </NameSelectGrid>
-            <CancelDrawButton onClick={() => onSetDrawMode('select')}>
+            <CancelDrawButton
+              onClick={() => {
+                onSetDrawMode('select');
+                setSearchTerm('');
+              }}
+            >
               뒤로
             </CancelDrawButton>
           </>

@@ -105,32 +105,48 @@ export function useGameData({
         return;
       }
 
-      // 오프라인 플레이어 턴 스킵 (중복 호출 방지)
-      void getGameState().then((state) => {
-        if (
-          state?.is_started &&
-          !state.is_finished &&
-          !isSkippingTurnRef.current
-        ) {
-          const currentTurnPlayer = playerList.find(
-            (p) => p.order === state.current_order,
-          );
-          if (currentTurnPlayer && !currentTurnPlayer.is_online) {
-            isSkippingTurnRef.current = true;
-            void nextTurn().finally(() => {
-              setTimeout(() => {
-                isSkippingTurnRef.current = false;
-              }, 1000);
-            });
-          }
-        }
-      });
+      // 오프라인이거나 게임 미참여(order=0) 플레이어 턴 스킵
+      void checkAndSkipInvalidTurn(playerList);
     });
+
+    // 3초마다 턴 체크 (잘못된 턴 수정)
+    const turnCheckInterval = setInterval(() => {
+      void getAllPlayers().then((playerList) => {
+        void checkAndSkipInvalidTurn(playerList);
+      });
+    }, 3000);
 
     return () => {
       void gameSubscription.unsubscribe();
       void playersSubscription.unsubscribe();
+      clearInterval(turnCheckInterval);
     };
+
+    // 유효하지 않은 턴 스킵 함수
+    async function checkAndSkipInvalidTurn(playerList: Player[]) {
+      if (isSkippingTurnRef.current) return;
+
+      const state = await getGameState();
+      if (!state?.is_started || state.is_finished) return;
+
+      const currentTurnPlayer = playerList.find(
+        (p) => p.order === state.current_order,
+      );
+
+      // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우 스킵
+      const shouldSkip =
+        !currentTurnPlayer ||
+        !currentTurnPlayer.is_online ||
+        currentTurnPlayer.order === 0;
+
+      if (shouldSkip) {
+        isSkippingTurnRef.current = true;
+        await nextTurn();
+        setTimeout(() => {
+          isSkippingTurnRef.current = false;
+        }, 1000);
+      }
+    }
   }, []); // 의존성 배열 비움 - 콜백은 ref로 관리
 
   return { user, setUser, gameState, players, setPlayers, isLoading };
