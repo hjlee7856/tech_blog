@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { resetGame, startGame } from '../../../lib/game';
 
 interface UseCountdownReturn {
@@ -19,6 +19,12 @@ export function useCountdown(onResetComplete?: () => void): UseCountdownReturn {
   );
   const isCountdownStartingRef = useRef(false);
 
+  // 콜백을 ref로 저장하여 의존성 배열에서 제거
+  const onResetCompleteRef = useRef(onResetComplete);
+  useEffect(() => {
+    onResetCompleteRef.current = onResetComplete;
+  }, [onResetComplete]);
+
   useEffect(() => {
     if (countdown === null) return;
 
@@ -27,7 +33,7 @@ export function useCountdown(onResetComplete?: () => void): UseCountdownReturn {
         void startGame();
       } else if (countdownType === 'reset') {
         void resetGame();
-        onResetComplete?.();
+        onResetCompleteRef.current?.();
       }
       setCountdown(null);
       setCountdownType(null);
@@ -40,15 +46,18 @@ export function useCountdown(onResetComplete?: () => void): UseCountdownReturn {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, countdownType, onResetComplete]);
+  }, [countdown, countdownType]);
 
-  const startCountdown = (type: 'start' | 'reset', seconds: number) => {
-    if (!isCountdownStartingRef.current) {
-      isCountdownStartingRef.current = true;
-      setCountdownType(type);
-      setCountdown(seconds);
-    }
-  };
+  const startCountdown = useCallback(
+    (type: 'start' | 'reset', seconds: number) => {
+      if (!isCountdownStartingRef.current) {
+        isCountdownStartingRef.current = true;
+        setCountdownType(type);
+        setCountdown(seconds);
+      }
+    },
+    [],
+  );
 
   return {
     countdown,

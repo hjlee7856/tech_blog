@@ -40,6 +40,19 @@ export function useGameData({
   const isResettingRef = useRef(false);
   const isSkippingTurnRef = useRef(false);
 
+  // 콜백을 ref로 저장하여 의존성 배열에서 제거 (재구독 방지)
+  const onGameFinishRef = useRef(onGameFinish);
+  const onAloneInGameRef = useRef(onAloneInGame);
+
+  // 콜백이 변경되면 ref 업데이트
+  useEffect(() => {
+    onGameFinishRef.current = onGameFinish;
+  }, [onGameFinish]);
+
+  useEffect(() => {
+    onAloneInGameRef.current = onAloneInGame;
+  }, [onAloneInGame]);
+
   useEffect(() => {
     const init = async () => {
       const [authResult, state, playerList] = await Promise.all([
@@ -61,7 +74,7 @@ export function useGameData({
       setGameState(state);
       if (state.is_finished && state.winner_id) {
         const ranking = await getOnlinePlayersRanking();
-        onGameFinish(ranking);
+        onGameFinishRef.current(ranking);
       }
     });
 
@@ -81,7 +94,7 @@ export function useGameData({
             !isResettingRef.current
           ) {
             isResettingRef.current = true;
-            onAloneInGame();
+            onAloneInGameRef.current();
             void resetGame().finally(() => {
               setTimeout(() => {
                 isResettingRef.current = false;
@@ -118,7 +131,7 @@ export function useGameData({
       void gameSubscription.unsubscribe();
       void playersSubscription.unsubscribe();
     };
-  }, [onGameFinish, onAloneInGame]);
+  }, []); // 의존성 배열 비움 - 콜백은 ref로 관리
 
   return { user, setUser, gameState, players, setPlayers, isLoading };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createNameMap } from '../../lib/characterUtils';
 import { getPlayerBoard, saveBoard, setReadyFalse } from '../../lib/game';
 import { CharacterSelectModal } from '../CharacterSelectModal/CharacterSelectModal';
@@ -46,11 +46,25 @@ export function BingoBoard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 컴포넌트 마운트 시 DB에서 보드 로드 (항상 DB 우선)
+  // 이전 userId를 추적하여 변경 시 재로드
+  const prevUserIdRef = useRef<number | null>(null);
+
+  // 컴포넌트 마운트 시 또는 userId 변경 시 DB에서 보드 로드
   useEffect(() => {
+    // userId가 변경되면 재로드 필요
+    if (prevUserIdRef.current !== null && prevUserIdRef.current !== userId) {
+      setIsLoaded(false);
+    }
+    prevUserIdRef.current = userId;
+
     if (isLoaded) return;
+
+    let isCancelled = false;
+
     const loadBoard = async () => {
       const savedBoard: string[] = await getPlayerBoard(userId);
+      if (isCancelled) return;
+
       if (savedBoard.length === 25) {
         setBoard(savedBoard);
       } else if (savedBoard.length > 0) {
@@ -69,6 +83,10 @@ export function BingoBoard({
       setIsLoaded(true);
     };
     void loadBoard();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [userId, isLoaded, initialBoard]);
 
   // 한글-영어 이름 매핑
@@ -77,20 +95,26 @@ export function BingoBoard({
     [characterNames, characterEnNames],
   );
 
-  const getImagePath = (koreanName: string) => {
-    const englishName = nameMap.get(koreanName);
-    if (!englishName) return '/genshin-impact/Aino_Avatar.webp';
-    const safeName = englishName.replaceAll(' ', '_').replaceAll('%20', '_');
-    return `/genshin-impact/${safeName}_Avatar.webp`;
-  };
+  const getImagePath = useCallback(
+    (koreanName: string) => {
+      const englishName = nameMap.get(koreanName);
+      if (!englishName) return '/genshin-impact/Aino_Avatar.webp';
+      const safeName = englishName.replaceAll(' ', '_').replaceAll('%20', '_');
+      return `/genshin-impact/${safeName}_Avatar.webp`;
+    },
+    [nameMap],
+  );
 
   const usedNames = new Set(
     board.filter((name): name is string => name !== null),
   );
   const availableNames = characterNames.filter((name) => !usedNames.has(name));
 
-  // 보드 변경시 저장 및 준비 상태 체크
+  // 보드 변경시 저장 및 준비 상태 체크 (로드 완료 후에만)
   useEffect(() => {
+    // 로드 전에는 저장하지 않음 (빈 보드로 덮어쓰기 방지)
+    if (!isLoaded) return;
+
     const validBoard = board.filter((name): name is string => name !== null);
     // 항상 현재 보드 상태 저장
     void saveBoard(userId, validBoard);
@@ -99,29 +123,35 @@ export function BingoBoard({
     if (validBoard.length < 25) {
       void setReadyFalse(userId);
     }
-  }, [board, userId]);
+  }, [board, userId, isLoaded]);
 
   // 게임 참여 전(order === 0)이면 게임 중에도 보드 수정 가능
   const canEditBoard = !isGameStarted || playerOrder === 0;
 
-  const handleCellClick = (index: number) => {
-    if (!canEditBoard) return; // 게임 참여 후에는 수정 불가
-    setSelectedCell(index);
-    setIsModalOpen(true);
-  };
+  const handleCellClick = useCallback(
+    (index: number) => {
+      if (!canEditBoard) return;
+      setSelectedCell(index);
+      setIsModalOpen(true);
+    },
+    [canEditBoard],
+  );
 
-  const handleSelectCharacter = (name: string) => {
-    if (selectedCell === null || !canEditBoard) return;
-    setBoard((prev) => {
-      const newBoard = [...prev];
-      newBoard[selectedCell] = name;
-      return newBoard;
-    });
-    setIsModalOpen(false);
-    setSelectedCell(null);
-  };
+  const handleSelectCharacter = useCallback(
+    (name: string) => {
+      if (selectedCell === null || !canEditBoard) return;
+      setBoard((prev) => {
+        const newBoard = [...prev];
+        newBoard[selectedCell] = name;
+        return newBoard;
+      });
+      setIsModalOpen(false);
+      setSelectedCell(null);
+    },
+    [selectedCell, canEditBoard],
+  );
 
-  const handleClearCell = () => {
+  const handleClearCell = useCallback(() => {
     if (selectedCell === null || !canEditBoard) return;
     setBoard((prev) => {
       const newBoard = [...prev];
@@ -130,18 +160,18 @@ export function BingoBoard({
     });
     setIsModalOpen(false);
     setSelectedCell(null);
-  };
+  }, [selectedCell, canEditBoard]);
 
-  const handleRandomFill = () => {
+  const handleRandomFill = useCallback(() => {
     if (!canEditBoard) return;
     const shuffled = [...characterNames].toSorted(() => Math.random() - 0.5);
     setBoard(shuffled.slice(0, 25));
-  };
+  }, [canEditBoard, characterNames]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     if (!canEditBoard) return;
     setBoard(Array.from<string | null>({ length: 25 }).fill(null));
-  };
+  }, [canEditBoard]);
 
   // 완성된 빙고 라인에 포함된 셀 인덱스 계산
   const bingoLineCells = useMemo(() => {
@@ -177,9 +207,12 @@ export function BingoBoard({
     return cells;
   }, [board, drawnNames]);
 
-  const isMatched = (name: string | null) => {
-    return name !== null && drawnNames.includes(name);
-  };
+  const isMatched = useCallback(
+    (name: string | null) => {
+      return name !== null && drawnNames.includes(name);
+    },
+    [drawnNames],
+  );
 
   const isInBingoLine = (index: number) => bingoLineCells.has(index);
 

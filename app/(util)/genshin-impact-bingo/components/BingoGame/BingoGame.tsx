@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getProfileImagePath,
   logout,
@@ -10,8 +10,6 @@ import {
   type User,
 } from '../../lib/auth';
 import {
-  agreeToStartGame,
-  cancelStartRequest,
   checkAndUpdateAllScores,
   checkGameFinish,
   drawName,
@@ -19,14 +17,12 @@ import {
   getOnlinePlayersRanking,
   joinGameInProgress,
   nextTurn,
-  requestStartGame,
   toggleReady,
   updateOnlineStatus,
   type Player,
 } from '../../lib/game';
 import { BingoBoard } from '../BingoBoard/BingoBoard';
 import { LoginModal } from '../LoginModal';
-import { OnboardingOverlay } from '../OnboardingOverlay';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
@@ -46,25 +42,14 @@ import {
   ProfileImage,
   ReadyButton,
   ReadySection,
-  RequestStartButton,
   StatusText,
   TurnInfo,
   TurnSection,
   UserInfo,
   UserName,
 } from './BingoGame.styles';
-import {
-  useCountdown,
-  useGameData,
-  useOnlineStatus,
-  useStartRequest,
-} from './hooks';
-import {
-  AloneModal,
-  DrawModal,
-  FinishModal,
-  StartRequestModal,
-} from './modals';
+import { useCountdown, useGameData, useOnlineStatus } from './hooks';
+import { AloneModal, DrawModal, FinishModal } from './modals';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -80,7 +65,6 @@ export function BingoGame({
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAloneModal, setShowAloneModal] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
   const [showDrawModal, setShowDrawModal] = useState(false);
   const [drawnResult, setDrawnResult] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<'select' | 'random' | 'list'>(
@@ -99,32 +83,50 @@ export function BingoGame({
     startCountdown,
   } = useCountdown(() => setShowFinishModal(false));
 
+  // 콜백 메모이제이션 (재구독 방지)
+  const handleGameFinish = useCallback(
+    (ranking: Player[]) => {
+      setFinalRanking(ranking);
+      setShowFinishModal(true);
+      setCountdownType('reset');
+      setCountdown(5);
+    },
+    [setCountdownType, setCountdown],
+  );
+
+  const handleAloneInGame = useCallback(() => {
+    setShowAloneModal(true);
+    setTimeout(() => setShowAloneModal(false), 3000);
+  }, []);
+
   // 게임 데이터 훅
+  const gameDataCallbacks = useMemo(
+    () => ({
+      onGameFinish: handleGameFinish,
+      onAloneInGame: handleAloneInGame,
+    }),
+    [handleGameFinish, handleAloneInGame],
+  );
+
   const { user, setUser, gameState, players, setPlayers, isLoading } =
-    useGameData({
-      onGameFinish: (ranking) => {
-        setFinalRanking(ranking);
-        setShowFinishModal(true);
-        setCountdownType('reset');
-        setCountdown(5);
-      },
-      onAloneInGame: () => {
-        setShowAloneModal(true);
-        setTimeout(() => setShowAloneModal(false), 3000);
-      },
-    });
+    useGameData(gameDataCallbacks);
 
   // 온라인 상태 관리 훅
   useOnlineStatus(user?.id);
 
-  // 시작 요청 훅
-  const { showStartRequestModal, startRequestRemainingTime } = useStartRequest({
-    gameState,
-    players,
-    countdown,
-    isCountdownStartingRef,
-    onStartCountdown: () => startCountdown('start', 5),
-  });
+  // 2명 이상 준비 시 자동 시작
+  useEffect(() => {
+    if (!gameState || gameState.is_started) return;
+    if (countdown !== null || isCountdownStartingRef.current) return;
+
+    const readyOnlinePlayers = players.filter(
+      (p) => p.is_online && p.is_ready && p.board.length === 25,
+    );
+
+    if (readyOnlinePlayers.length >= 2) {
+      startCountdown('start', 5);
+    }
+  }, [gameState, players, countdown, isCountdownStartingRef, startCountdown]);
 
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
@@ -145,29 +147,6 @@ export function BingoGame({
     const playerList = await getAllPlayers();
     setPlayers(playerList);
   };
-
-  // 게임 시작 요청
-  const handleRequestStart = async () => {
-    if (!user) return;
-    const result = await requestStartGame(user.id);
-    if (!result.success) {
-      alert(result.error || '게임 시작 요청에 실패했습니다.');
-    }
-  };
-
-  // 게임 시작 동의
-  const handleAgreeStart = async () => {
-    if (!user) return;
-    const result = await agreeToStartGame(user.id);
-    if (!result.success) {
-      alert(result.error || '동의에 실패했습니다.');
-    }
-  };
-
-  // 게임 시작 요청 취소
-  const handleCancelStartRequest = useCallback(async () => {
-    await cancelStartRequest();
-  }, []);
 
   const handleDrawName = async () => {
     if (!gameState || isDrawing) return;
@@ -350,35 +329,21 @@ export function BingoGame({
       </GameStatus>
 
       {/* 게임 대기 중일 때 준비 섹션 */}
-      {!gameState?.is_started &&
-        (() => {
-          const readyPlayers = players.filter(
-            (p) => p.is_online && p.is_ready && p.board.length === 25,
-          );
-          const canRequestStart =
-            readyPlayers.length >= 2 && myPlayer?.is_ready;
-
-          return (
-            <ReadySection>
-              <ReadyButton
-                isReady={myPlayer?.is_ready ?? false}
-                onClick={handleToggleReady}
-                disabled={myPlayer?.board.length !== 25}
-              >
-                {myPlayer?.board.length !== 25
-                  ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
-                  : myPlayer?.is_ready
-                    ? '준비 완료!'
-                    : '준비하기'}
-              </ReadyButton>
-              {canRequestStart && !gameState?.start_requested_by && (
-                <RequestStartButton onClick={handleRequestStart}>
-                  게임 시작 요청 ({readyPlayers.length}명 준비됨)
-                </RequestStartButton>
-              )}
-            </ReadySection>
-          );
-        })()}
+      {!gameState?.is_started && (
+        <ReadySection>
+          <ReadyButton
+            isReady={myPlayer?.is_ready ?? false}
+            onClick={handleToggleReady}
+            disabled={myPlayer?.board.length !== 25}
+          >
+            {myPlayer?.board.length !== 25
+              ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
+              : myPlayer?.is_ready
+                ? '준비 완료!'
+                : '준비하기'}
+          </ReadyButton>
+        </ReadySection>
+      )}
 
       {gameState?.is_started && (
         <TurnSection>
@@ -493,35 +458,6 @@ export function BingoGame({
 
       {/* 혼자 남음 모달 */}
       <AloneModal isOpen={showAloneModal} />
-
-      {/* 게임 시작 요청 모달 */}
-      <StartRequestModal
-        isOpen={
-          showStartRequestModal &&
-          !!gameState?.start_requested_by &&
-          !gameState.is_started
-        }
-        requesterName={
-          players.find((p) => p.id === gameState?.start_requested_by)?.name ||
-          '알 수 없음'
-        }
-        readyOnlinePlayers={players.filter(
-          (p) => p.is_online && p.is_ready && p.board.length === 25,
-        )}
-        agreedUsers={gameState?.start_agreed_users || []}
-        hasAgreed={
-          user ? (gameState?.start_agreed_users || []).includes(user.id) : false
-        }
-        isRequester={user?.id === gameState?.start_requested_by}
-        remainingTime={startRequestRemainingTime}
-        onAgree={handleAgreeStart}
-        onCancel={handleCancelStartRequest}
-      />
-
-      {/* 온보딩 오버레이 */}
-      {showOnboarding && (
-        <OnboardingOverlay onComplete={() => setShowOnboarding(false)} />
-      )}
     </Container>
   );
 }
