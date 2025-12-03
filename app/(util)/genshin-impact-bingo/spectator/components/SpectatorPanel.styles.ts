@@ -99,7 +99,6 @@ export const PlayerCard = styled('button', {
     backgroundColor: '#2B2D31',
     border: '2px solid transparent',
     borderRadius: '8px',
-    cursor: 'pointer',
     transition: 'all 0.2s',
     textAlign: 'left',
     width: '100%',
