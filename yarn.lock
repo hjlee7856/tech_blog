@@ -2831,10 +2831,10 @@ generator-function@^2.0.0:
   resolved "https://registry.yarnpkg.com/generator-function/-/generator-function-2.0.1.tgz#0e75dd410d1243687a0ba2e951b94eedb8f737a2"
   integrity sha512-SFdFmIJi+ybC0vjlHN0ZGVGHc3lgE0DxPAT0djjVg+kjOnSqclqmj0KQ7ykTOLP6YxoqOvuAODGdcHJn+43q3g==
 
-genshin-data@^0.55.0:
-  version "0.55.0"
-  resolved "https://registry.yarnpkg.com/genshin-data/-/genshin-data-0.55.0.tgz#9e35a53baeeedc5490bfd65ff9d1cb0f5d1a37af"
-  integrity sha512-noRHBbQVV2G4luWaMjqO0/eNJQAUUfLvusOTGNKXIUcSrziHpPJzi0KbT7ZDBcodg1awVLUEzhzY/X88BbuCqQ==
+genshin-data@^0.56.0:
+  version "0.56.0"
+  resolved "https://registry.yarnpkg.com/genshin-data/-/genshin-data-0.56.0.tgz#9bc07b0ca09af00edb3ce3eed3ec1f16fdf93e88"
+  integrity sha512-jg3avdz3a2oJx99+nROXYAQDZbwHAWx4LsocXN5GEh762BJKW5RiwcoOg+BGvnMG61SQtWLuPqqppOUhMQIsuQ==
 
 gensync@^1.0.0-beta.2:
   version "1.0.0-beta.2"
