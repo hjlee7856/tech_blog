@@ -22,12 +22,15 @@ import {
   updateOnlineStatus,
   type Player,
 } from '../../lib/game';
-import { BingoBoard } from '../BingoBoard/BingoBoard';
+import { BingoBoard, type BingoBoardActions } from '../BingoBoard/BingoBoard';
 import { LoginModal } from '../LoginModal';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
   AdminResetButton,
+  BoardActionButton,
+  BoardActionDangerButton,
+  BoardActions,
   ConfirmDialog,
   ConfirmDialogButtons,
   ConfirmDialogText,
@@ -74,8 +77,12 @@ export function BingoGame({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAloneModal, setShowAloneModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showBoardClearConfirm, setShowBoardClearConfirm] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [boardActions, setBoardActions] = useState<BingoBoardActions | null>(
+    null,
+  );
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
   // 콜백 메모이제이션 (재구독 방지)
@@ -234,35 +241,6 @@ export function BingoGame({
     return activePlayers[nextIdx];
   }, [gameState, players]);
 
-  // 내 순위 계산 (채팅 자랑용)
-  const myRank = useMemo(() => {
-    if (!user || !gameState?.is_started) return undefined;
-    const rankedPlayers = players
-      .filter((p) => p.is_online && p.order > 0)
-      .toSorted((a, b) => {
-        const aComplete = a.board.length === 25 && a.score === 12;
-        const bComplete = b.board.length === 25 && b.score === 12;
-        if (aComplete !== bComplete) return bComplete ? 1 : -1;
-        return b.score - a.score;
-      });
-    const myIndex = rankedPlayers.findIndex((p) => p.id === user.id);
-    if (myIndex === -1) return undefined;
-
-    // 공동 순위 계산
-    let rank = 1;
-    for (let i = 0; i < myIndex; i++) {
-      const prev = rankedPlayers[i];
-      const curr = rankedPlayers[i + 1];
-      if (!prev || !curr) continue;
-      const prevComplete = prev.board.length === 25 && prev.score === 12;
-      const currComplete = curr.board.length === 25 && curr.score === 12;
-      if (prev.score !== curr.score || prevComplete !== currComplete) {
-        rank = i + 2;
-      }
-    }
-    return rank;
-  }, [user, gameState?.is_started, players]);
-
   // 뽑은 이름 목록 자동 스크롤
   useEffect(() => {
     if (drawnNamesListRef.current) {
@@ -305,61 +283,84 @@ export function BingoGame({
         </UserInfo>
       </Header>
 
-      <GameStatus>
-        <StatusText isStarted={gameState?.is_started ?? false}>
-          {gameState?.is_started
-            ? '게임 진행 중'
-            : `게임 대기 중 - ${myPlayer?.is_ready ? '다른 유저를 기다리는 중' : '보드를 채워주세요!'}`}
-        </StatusText>
-        {gameState?.is_started && lastDrawnName && (
-          <DrawnNameDisplay isLatest>
-            마지막 뽑힌 이름: <strong>{lastDrawnName}</strong>
-          </DrawnNameDisplay>
-        )}
-      </GameStatus>
-
       {/* 게임 대기 중일 때 준비 섹션 */}
       {!gameState?.is_started && (
         <ReadySection>
-          <ReadyButton
-            isReady={myPlayer?.is_ready ?? false}
-            onClick={handleToggleReady}
-            disabled={myPlayer?.board.length !== 25}
-          >
-            {myPlayer?.board.length !== 25
-              ? `보드를 먼저 완성해주세요 (${myPlayer?.board.length ?? 0}/25)`
-              : myPlayer?.is_ready
-                ? '준비 완료!'
-                : '준비하기'}
-          </ReadyButton>
+          <GameStatus>
+            <StatusText isReady={myPlayer?.is_ready}>
+              {myPlayer?.is_ready
+                ? '다른 유저를 기다리는 중'
+                : '보드를 채우고 준비 버튼을 눌러주세요!'}
+            </StatusText>
+          </GameStatus>
+          <BoardActions>
+            {!myPlayer?.is_ready && (
+              <BoardActionButton onClick={() => boardActions?.fillRandom()}>
+                랜덤 채우기
+              </BoardActionButton>
+            )}
+            <ReadyButton
+              isReady={myPlayer?.is_ready ?? false}
+              onClick={handleToggleReady}
+              disabled={myPlayer?.board.length !== 25}
+            >
+              {myPlayer?.is_ready ? '준비 완료!' : '준비하기'}
+            </ReadyButton>
+            {!myPlayer?.is_ready && myPlayer?.board.length === 25 && (
+              <BoardActionDangerButton
+                onClick={() => setShowBoardClearConfirm(true)}
+              >
+                보드 초기화
+              </BoardActionDangerButton>
+            )}
+          </BoardActions>
         </ReadySection>
       )}
 
+      {/* 게임 진행 중일 때 턴 섹션 */}
       {gameState?.is_started && (
         <TurnSection>
-          {/* 현재 턴 / 다음 턴 표시 */}
+          <GameStatus>
+            <StatusText isReady={false}>게임 진행 중</StatusText>
+            {lastDrawnName && (
+              <DrawnNameDisplay isLatest>
+                마지막 뽑힌 이름: <strong>{lastDrawnName}</strong>
+              </DrawnNameDisplay>
+            )}
+          </GameStatus>
           <TurnInfo>
-            현재 턴: <strong>{currentTurnPlayer?.name || '대기 중'}</strong>
+            현재 턴:{' '}
+            <strong style={{ color: '#3BA55C' }}>
+              {currentTurnPlayer?.name || '대기 중'}
+            </strong>
             {nextTurnPlayer && nextTurnPlayer.id !== currentTurnPlayer?.id && (
-              <> → 다음 턴: {nextTurnPlayer.name}</>
+              <>
+                → 다음 턴:{' '}
+                <strong style={{ color: '#5865F2' }}>
+                  {nextTurnPlayer.name}
+                </strong>
+              </>
             )}
           </TurnInfo>
 
           {isMyTurn && (
             <TurnInfo isMyTurn>
-              이름을 뽑을 차례입니다!{'\n'}보드에서 뽑을 이름을 선택하세요
+              이름을 뽑을 차례입니다!{'\n'}보드에서 이름을 선택하세요.
             </TurnInfo>
           )}
           {!isMyTurn && myPlayer?.order !== 0 && (
             <TurnInfo>
-              {`${currentTurnPlayer?.name || '대기 중'} 님이 이름을 뽑고 있습니다.`}
+              <strong style={{ color: '#FFD700' }}>
+                {currentTurnPlayer?.name || '대기 중'}
+              </strong>
+              {` 님이 이름을 뽑고 있습니다.`}
             </TurnInfo>
           )}
           {!isMyTurn &&
             myPlayer?.order === 0 &&
             myPlayer?.board.length === 25 && (
               <>
-                <TurnInfo>게임 중간 참여가 가능합니다!</TurnInfo>
+                <TurnInfo>현재 게임이 진행 중 입니다!</TurnInfo>
                 <DrawButton onClick={handleJoinGame}>게임 참여하기</DrawButton>
               </>
             )}
@@ -384,6 +385,7 @@ export function BingoGame({
         isMyTurn={isMyTurn ?? false}
         isDrawing={isDrawing}
         onSelectForDraw={(name) => void handleSelectDraw(name)}
+        onRegisterActions={setBoardActions}
       />
 
       {/* 채팅 */}
@@ -391,7 +393,7 @@ export function BingoGame({
         userId={user.id}
         userName={user.name}
         profileImage={user.profile_image}
-        myRank={myRank}
+        myScore={myPlayer?.score}
         isGameStarted={gameState?.is_started}
       />
 
@@ -444,6 +446,34 @@ export function BingoGame({
         <AdminResetButton onClick={() => setShowResetConfirm(true)}>
           게임 초기화
         </AdminResetButton>
+      )}
+
+      {/* 보드 초기화 확인 모달 */}
+      {showBoardClearConfirm && (
+        <ModalOverlay>
+          <ConfirmDialog>
+            <ConfirmDialogTitle>보드 초기화</ConfirmDialogTitle>
+            <ConfirmDialogText>
+              현재 보드의 모든 캐릭터가 삭제됩니다. {'\n'}계속하시겠습니까?
+            </ConfirmDialogText>
+            <ConfirmDialogButtons>
+              <ResetButton
+                onClick={() => {
+                  boardActions?.clearAll();
+                  setShowBoardClearConfirm(false);
+                }}
+              >
+                초기화
+              </ResetButton>
+              <RestartButton
+                onClick={() => setShowBoardClearConfirm(false)}
+                style={{ backgroundColor: '#3F4147' }}
+              >
+                취소
+              </RestartButton>
+            </ConfirmDialogButtons>
+          </ConfirmDialog>
+        </ModalOverlay>
       )}
 
       {/* 게임 초기화 확인 모달 */}

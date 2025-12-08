@@ -39,14 +39,14 @@ export const MessageList = styled('div', {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    maxHeight: '150px',
+    maxHeight: '300px',
     overflowY: 'auto',
     marginBottom: '10px',
     padding: '8px',
     backgroundColor: '#1E1F22',
     borderRadius: '8px',
     md: {
-      maxHeight: '200px',
+      maxHeight: '400px',
       gap: '8px',
     },
   },
@@ -83,14 +83,14 @@ export const MessageItem = styled('div', {
 
 export const MessageProfile = styled('div', {
   base: {
-    width: '20px',
-    height: '20px',
+    width: '32px',
+    height: '32px',
     borderRadius: '50%',
     overflow: 'hidden',
     flexShrink: 0,
     md: {
-      width: '24px',
-      height: '24px',
+      width: '32px',
+      height: '32px',
     },
   },
 });
@@ -101,6 +101,14 @@ export const MessageContent = styled('div', {
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
+  },
+});
+
+export const MessageHeaderContainer = styled('div', {
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
   },
 });
 
@@ -122,6 +130,17 @@ export const MessageText = styled('span', {
     wordBreak: 'break-word',
     md: {
       fontSize: '14px',
+    },
+  },
+});
+
+export const MessageTime = styled('span', {
+  base: {
+    fontSize: '10px',
+    color: '#72767D',
+    flexShrink: 0,
+    md: {
+      fontSize: '11px',
     },
   },
 });

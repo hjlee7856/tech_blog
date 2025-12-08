@@ -879,21 +879,21 @@ export async function getChatMessages(): Promise<ChatMessage[]> {
   return (data as ChatMessage[]).toReversed();
 }
 
-// 채팅 메시지 실시간 구독
+// 채팅 메시지 실시간 구독 (초기 로드 후 새 메시지만 추가)
 export function subscribeToChatMessages(
-  callback: (messages: ChatMessage[]) => void,
+  onInitialLoad: (messages: ChatMessage[]) => void,
+  onNewMessage: (message: ChatMessage) => void,
 ) {
   // 초기 로드
-  void getChatMessages().then(callback);
+  void getChatMessages().then(onInitialLoad);
 
   return supabase
     .channel('chat-messages')
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'genshin-bingo-chat' },
-      async () => {
-        const messages = await getChatMessages();
-        callback(messages);
+      { event: 'INSERT', schema: 'public', table: 'genshin-bingo-chat' },
+      (payload) => {
+        onNewMessage(payload.new as ChatMessage);
       },
     )
     .subscribe();

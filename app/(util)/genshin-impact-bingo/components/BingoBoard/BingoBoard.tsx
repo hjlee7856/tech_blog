@@ -14,13 +14,10 @@ import {
   AllMatchedCell,
   BingoLineCell,
   Board,
-  Button,
-  ButtonContainer,
   CancelButton,
   Cell,
   CellImage,
   CellName,
-  ClearButton,
   ConfirmButton,
   Container,
   DrawConfirmButtons,
@@ -30,6 +27,11 @@ import {
   SelectableCell,
   SelectedForDrawCell,
 } from './BingoBoard.styles';
+
+export interface BingoBoardActions {
+  fillRandom: () => void;
+  clearAll: () => void;
+}
 
 interface BingoBoardProps {
   characterNames: string[];
@@ -41,6 +43,7 @@ interface BingoBoardProps {
   isMyTurn?: boolean; // 내 턴인지 여부
   isDrawing?: boolean; // 뽑기 진행 중인지
   onSelectForDraw?: (name: string) => void; // 뽑기용 선택 콜백
+  onRegisterActions?: (actions: BingoBoardActions | null) => void;
 }
 
 export function BingoBoard({
@@ -53,6 +56,7 @@ export function BingoBoard({
   isMyTurn = false,
   isDrawing = false,
   onSelectForDraw,
+  onRegisterActions,
 }: BingoBoardProps) {
   // 초기값은 빈 보드로 시작, DB에서 로드 후 업데이트
   const [board, setBoard] = useState<(string | null)[]>(
@@ -63,8 +67,21 @@ export function BingoBoard({
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedForDraw, setSelectedForDraw] = useState<string | null>(null);
 
+  // 로컬/서버 동기화 상태 관리
+  const isApplyingLocalChangeRef = useRef(false);
+  const isSyncingFromServerRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // 이전 userId를 추적하여 변경 시 재로드
   const prevUserIdRef = useRef<number | null>(null);
+
+  const applyBoardUpdate = useCallback(
+    (updater: (prev: (string | null)[]) => (string | null)[]) => {
+      isApplyingLocalChangeRef.current = true;
+      setBoard((prev) => updater([...prev]));
+    },
+    [],
+  );
 
   // 컴포넌트 마운트 시 또는 userId 변경 시 DB에서 보드 로드
   useEffect(() => {
@@ -83,6 +100,7 @@ export function BingoBoard({
       if (isCancelled) return;
 
       if (savedBoard.length === 25) {
+        isSyncingFromServerRef.current = true;
         setBoard(savedBoard);
       } else if (savedBoard.length > 0) {
         // 부분적으로 저장된 보드가 있으면 복원
@@ -92,9 +110,11 @@ export function BingoBoard({
         for (const [idx, name] of savedBoard.entries()) {
           if (idx < 25) newBoard[idx] = name;
         }
+        isSyncingFromServerRef.current = true;
         setBoard(newBoard);
       } else {
         // DB에 보드가 없으면 로컬도 초기화
+        isSyncingFromServerRef.current = true;
         setBoard(Array.from<string | null>({ length: 25 }).fill(null));
       }
       setIsLoaded(true);
@@ -109,19 +129,69 @@ export function BingoBoard({
   // 플레이어 보드 변경 구독 (게임 초기화 시 보드 리셋 감지)
   useEffect(() => {
     const subscription = subscribeToPlayerBoard(userId, (newBoard) => {
+      if (isApplyingLocalChangeRef.current) return;
+
+      isSyncingFromServerRef.current = true;
+
       if (newBoard.length === 0) {
         // 보드가 초기화되면 로컬도 초기화
         setBoard(Array.from<string | null>({ length: 25 }).fill(null));
         setIsLoaded(false);
-      } else if (newBoard.length === 25) {
-        setBoard(newBoard);
+        return;
       }
+
+      if (newBoard.length === 25) {
+        setBoard(newBoard);
+        return;
+      }
+
+      const partialBoard: (string | null)[] = Array.from<string | null>({
+        length: 25,
+      }).fill(null);
+      for (const [idx, name] of newBoard.entries()) {
+        if (idx < 25) partialBoard[idx] = name;
+      }
+      setBoard(partialBoard);
     });
 
     return () => {
       void subscription.unsubscribe();
     };
   }, [userId]);
+
+  // 보드 변경시 저장 및 준비 상태 체크 (로드 완료 후에만, debounce 적용)
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (isSyncingFromServerRef.current) {
+      isSyncingFromServerRef.current = false;
+      return;
+    }
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+    const timeoutId = setTimeout(() => {
+      void (async () => {
+        const validBoard = board.filter(
+          (name): name is string => name !== null,
+        );
+        await saveBoard(userId, validBoard);
+
+        if (validBoard.length < 25) {
+          await setReadyFalse(userId);
+        }
+
+        isApplyingLocalChangeRef.current = false;
+        saveTimeoutRef.current = null;
+      })();
+    }, 200);
+
+    saveTimeoutRef.current = timeoutId;
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [board, userId, isLoaded]);
 
   // 한글-영어 이름 매핑
   const nameMap = useMemo(
@@ -144,21 +214,6 @@ export function BingoBoard({
   );
   const availableNames = characterNames.filter((name) => !usedNames.has(name));
 
-  // 보드 변경시 저장 및 준비 상태 체크 (로드 완료 후에만)
-  useEffect(() => {
-    // 로드 전에는 저장하지 않음 (빈 보드로 덮어쓰기 방지)
-    if (!isLoaded) return;
-
-    const validBoard = board.filter((name): name is string => name !== null);
-    // 항상 현재 보드 상태 저장
-    void saveBoard(userId, validBoard);
-
-    // 25개 미만이면 준비 상태 해제
-    if (validBoard.length < 25) {
-      void setReadyFalse(userId);
-    }
-  }, [board, userId, isLoaded]);
-
   // 게임 참여 전(order === 0)이면 게임 중에도 보드 수정 가능
   const canEditBoard = !isGameStarted || playerOrder === 0;
 
@@ -174,38 +229,50 @@ export function BingoBoard({
   const handleSelectCharacter = useCallback(
     (name: string) => {
       if (selectedCell === null || !canEditBoard) return;
-      setBoard((prev) => {
-        const newBoard = [...prev];
-        newBoard[selectedCell] = name;
-        return newBoard;
+      applyBoardUpdate((prev) => {
+        const next = [...prev];
+        next[selectedCell] = name;
+        return next;
       });
       setIsModalOpen(false);
       setSelectedCell(null);
     },
-    [selectedCell, canEditBoard],
+    [selectedCell, canEditBoard, applyBoardUpdate],
   );
 
   const handleClearCell = useCallback(() => {
     if (selectedCell === null || !canEditBoard) return;
-    setBoard((prev) => {
-      const newBoard = [...prev];
-      newBoard[selectedCell] = null;
-      return newBoard;
+    applyBoardUpdate((prev) => {
+      const next = [...prev];
+      next[selectedCell] = null;
+      return next;
     });
     setIsModalOpen(false);
     setSelectedCell(null);
-  }, [selectedCell, canEditBoard]);
+  }, [selectedCell, canEditBoard, applyBoardUpdate]);
 
   const handleRandomFill = useCallback(() => {
     if (!canEditBoard) return;
     const shuffled = [...characterNames].toSorted(() => Math.random() - 0.5);
-    setBoard(shuffled.slice(0, 25));
-  }, [canEditBoard, characterNames]);
+    applyBoardUpdate(() => shuffled.slice(0, 25));
+  }, [canEditBoard, characterNames, applyBoardUpdate]);
 
   const handleClearAll = useCallback(() => {
     if (!canEditBoard) return;
-    setBoard(Array.from<string | null>({ length: 25 }).fill(null));
-  }, [canEditBoard]);
+    applyBoardUpdate(() =>
+      Array.from<string | null>({ length: 25 }).fill(null),
+    );
+  }, [canEditBoard, applyBoardUpdate]);
+
+  // 액션 등록 (부모 컴포넌트에서 사용)
+  useEffect(() => {
+    if (!onRegisterActions) return;
+    onRegisterActions({
+      fillRandom: handleRandomFill,
+      clearAll: handleClearAll,
+    });
+    return () => onRegisterActions(null);
+  }, [handleRandomFill, handleClearAll, onRegisterActions]);
 
   // 완성된 빙고 라인에 포함된 셀 인덱스 계산
   const bingoLineCells = useMemo(() => {
@@ -259,13 +326,6 @@ export function BingoBoard({
 
   return (
     <Container>
-      {canEditBoard && (
-        <ButtonContainer>
-          <Button onClick={handleRandomFill}>랜덤 채우기</Button>
-          <ClearButton onClick={handleClearAll}>전체 초기화</ClearButton>
-        </ButtonContainer>
-      )}
-
       <Board>
         {board.map((name, index) => {
           const matched = isMatched(name);

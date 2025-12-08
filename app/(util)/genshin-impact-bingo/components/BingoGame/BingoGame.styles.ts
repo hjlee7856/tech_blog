@@ -98,7 +98,6 @@ export const GameStatus = styled('div', {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '16px',
   },
 });
 
@@ -113,7 +112,7 @@ export const StatusText = styled('p', {
     },
   },
   variants: {
-    isStarted: {
+    isReady: {
       true: {
         color: '#3BA55C',
       },
@@ -173,6 +172,7 @@ export const TurnInfo = styled('p', {
     color: 'white',
     margin: 0,
     textAlign: 'center',
+    whiteSpace: 'pre-wrap',
     md: {
       fontSize: '16px',
     },
@@ -251,6 +251,57 @@ export const ReadySection = styled('div', {
       padding: '16px 24px',
       marginBottom: '16px',
       maxWidth: '600px',
+    },
+  },
+});
+
+export const BoardActions = styled('div', {
+  base: {
+    display: 'flex',
+    gap: '8px',
+    justifyContent: 'center',
+    width: '100%',
+  },
+});
+
+export const BoardActionButton = styled('button', {
+  base: {
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: 'white',
+    backgroundColor: '#5865F2',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#4752C4',
+    },
+    md: {
+      padding: '10px 20px',
+      fontSize: '14px',
+    },
+  },
+});
+
+export const BoardActionDangerButton = styled('button', {
+  base: {
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: 'white',
+    backgroundColor: '#ED4245',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#C73E3A',
+    },
+    md: {
+      padding: '10px 20px',
+      fontSize: '14px',
     },
   },
 });
@@ -1063,6 +1114,7 @@ export const ConfirmDialogText = styled('p', {
     color: '#B5BAC1',
     margin: 0,
     lineHeight: 1.5,
+    whiteSpace: 'pre-wrap',
   },
 });
 
