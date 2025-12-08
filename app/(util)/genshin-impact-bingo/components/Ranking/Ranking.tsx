@@ -38,7 +38,9 @@ function calculateRanks(players: Player[]): Map<number, number> {
   let prevComplete = false;
 
   for (const [index, player] of players.entries()) {
-    const isComplete = player.board.length === 25 && player.score === 12;
+    const isComplete =
+      player.board.filter((item) => item !== null && item !== '').length ===
+        25 && player.score === 12;
 
     // 점수가 다르거나 완성 상태가 다르면 순위 변경
     if (player.score !== prevScore || isComplete !== prevComplete) {
@@ -79,45 +81,114 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
 
   const rankMap = calculateRanks(players);
 
-  // 표시할 플레이어 목록 계산 (3위까지 + 자기자신)
-  const displayPlayers = useMemo(() => {
-    if (isExpanded) return players;
+  // 공동 순위별로 플레이어 그룹화
+  const rankedGroups = useMemo(() => {
+    const groups = new Map<number, Player[]>();
+    for (const player of players) {
+      const rank = rankMap.get(player.id) ?? 0;
+      if (!groups.has(rank)) {
+        groups.set(rank, []);
+      }
+      groups.get(rank)?.push(player);
+    }
+    return groups;
+  }, [players, rankMap]);
 
-    const top3: Player[] = [];
+  // 표시할 순위 그룹 계산 (3위까지 + 자기자신)
+  const displayGroups = useMemo(() => {
+    if (isExpanded) {
+      return Array.from(rankedGroups.entries()).toSorted(([a], [b]) => a - b);
+    }
+
+    const top3Groups: Array<[number, Player[]]> = [];
     const seenRanks = new Set<number>();
 
     // 3위까지 추가 (공동 순위 포함)
-    for (const player of players) {
-      const rank = rankMap.get(player.id) ?? 0;
+    for (const [rank, groupPlayers] of rankedGroups.entries()) {
       if (rank <= 3) {
-        top3.push(player);
-        seenRanks.add(player.id);
+        top3Groups.push([rank, groupPlayers]);
+        seenRanks.add(rank);
       }
     }
 
     // 자기자신이 3위 밖이면 추가
     if (userId) {
-      const myPlayer = players.find((p) => p.id === userId);
-      if (myPlayer && !seenRanks.has(userId)) {
-        top3.push(myPlayer);
+      const myRank = rankMap.get(userId) ?? 0;
+      if (myRank > 3 && !seenRanks.has(myRank)) {
+        const myGroup = rankedGroups.get(myRank);
+        if (myGroup) {
+          top3Groups.push([myRank, myGroup]);
+        }
       }
     }
 
-    return top3;
-  }, [players, rankMap, userId, isExpanded]);
+    return top3Groups.toSorted(([a], [b]) => a - b);
+  }, [rankedGroups, rankMap, userId, isExpanded]);
 
-  const hasMorePlayers = players.length > displayPlayers.length;
+  const totalDisplayedPlayers = displayGroups.reduce(
+    (sum, [, group]) => sum + group.length,
+    0,
+  );
+  const hasMorePlayers = players.length > totalDisplayedPlayers;
 
   return (
     <Container>
       <Title>실시간 순위</Title>
       <RankList>
-        {displayPlayers.map((player) => {
-          const rank = rankMap.get(player.id) ?? 0;
+        {displayGroups.map(([rank, groupPlayers]) => {
+          // 공동 순위인 경우 (2명 이상)
+          if (groupPlayers.length > 1) {
+            const hasMe = groupPlayers.some((p) => p.id === userId);
+            const names = groupPlayers
+              .map((p) => (p.id === userId ? `${p.name} (나)` : p.name))
+              .join(', ');
+            const score = groupPlayers[0]?.score ?? 0;
+            // 내 프로필 이미지 찾기
+            const myPlayer = groupPlayers.find((p) => p.id === userId);
+            const profileImage =
+              myPlayer?.profile_image ||
+              groupPlayers[0]?.profile_image ||
+              'Nahida';
+
+            return (
+              <RankItem key={rank} rank={getRankVariant(rank)} isMe={hasMe}>
+                <RankNumber>{rank}위</RankNumber>
+                <PlayerInfo>
+                  <ProfileImage>
+                    <Image
+                      src={getProfileImagePath(profileImage)}
+                      alt={names}
+                      width={24}
+                      height={24}
+                      style={{ borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  </ProfileImage>
+                  <PlayerNameWrapper>
+                    <PlayerName>{names}</PlayerName>
+                    {!isGameStarted && groupPlayers.some((p) => p.is_ready) && (
+                      <ReadyBadge
+                        isReady={groupPlayers.every((p) => p.is_ready)}
+                      >
+                        {groupPlayers.every((p) => p.is_ready)
+                          ? '준비완료'
+                          : '이름 채우는 중...'}
+                      </ReadyBadge>
+                    )}
+                  </PlayerNameWrapper>
+                </PlayerInfo>
+                <Score>{score}줄</Score>
+              </RankItem>
+            );
+          }
+
+          // 단독 순위인 경우
+          const player = groupPlayers[0];
+          if (!player) return null;
           const isMe = player.id === userId;
+
           return (
             <RankItem key={player.id} rank={getRankVariant(rank)} isMe={isMe}>
-              <RankNumber>{rank}</RankNumber>
+              <RankNumber>{rank}위</RankNumber>
               <PlayerInfo>
                 <ProfileImage>
                   <Image
@@ -156,7 +227,7 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
         <ExpandButton onClick={() => setIsExpanded(!isExpanded)}>
           {isExpanded
             ? '접기'
-            : `더보기 (${players.length - displayPlayers.length}명)`}
+            : `더보기 (${players.length - totalDisplayedPlayers}명)`}
         </ExpandButton>
       )}
     </Container>

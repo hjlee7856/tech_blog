@@ -75,7 +75,7 @@ export const MessageItem = styled('div', {
     },
     isMe: {
       true: {
-        backgroundColor: '#5865F2',
+        backgroundColor: '#4752C4',
       },
     },
   },

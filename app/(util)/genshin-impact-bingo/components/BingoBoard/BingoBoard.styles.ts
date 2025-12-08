@@ -315,22 +315,38 @@ export const SelectedForDrawCell = styled('button', {
   },
 });
 
-// 뽑기 확인 섹션
-export const DrawConfirmSection = styled('div', {
+// 뽑기 확인 모달 오버레이
+export const DrawConfirmOverlay = styled('div', {
+  base: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+});
+
+// 뽑기 확인 모달
+export const DrawConfirmModal = styled('div', {
   base: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '12px',
-    padding: '16px',
+    gap: '20px',
+    padding: '24px',
     backgroundColor: '#2B2D31',
-    borderRadius: '12px',
-    width: '100%',
+    borderRadius: '16px',
+    width: '90%',
     maxWidth: '400px',
-    marginTop: '12px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     md: {
-      padding: '20px',
-      gap: '16px',
+      padding: '32px',
+      gap: '24px',
     },
   },
 });

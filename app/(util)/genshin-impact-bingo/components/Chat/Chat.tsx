@@ -158,7 +158,8 @@ export function Chat({
   }, [userId, userName, profileImage, inputValue, isSending]);
 
   const handleBoast = useCallback(async () => {
-    if (!userId || !userName || !canBoast || isSending || !myScore) return;
+    if (!userId || !userName || !canBoast || isSending || !myScore || !myRank)
+      return;
 
     setIsSending(true);
     const boastMessage = `🎉 ${myScore}빙고!`;
@@ -169,10 +170,10 @@ export function Chat({
       profileImage || 'Arama',
       boastMessage,
       true,
-      myScore,
+      myRank,
     );
     setIsSending(false);
-  }, [userId, userName, profileImage, canBoast, isSending, myScore]);
+  }, [userId, userName, profileImage, canBoast, isSending, myScore, myRank]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

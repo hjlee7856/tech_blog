@@ -158,7 +158,7 @@ export const TurnSection = styled('div', {
     borderRadius: '12px',
     marginBottom: '12px',
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '600px',
     md: {
       padding: '16px 24px',
       marginBottom: '16px',
@@ -260,7 +260,22 @@ export const BoardActions = styled('div', {
     display: 'flex',
     gap: '8px',
     justifyContent: 'center',
+    alignItems: 'center',
     width: '100%',
+  },
+});
+
+export const BoardActionsLeft = styled('div', {
+  base: {
+    display: 'flex',
+    gap: '8px',
+  },
+});
+
+export const BoardActionsRight = styled('div', {
+  base: {
+    display: 'flex',
+    gap: '8px',
   },
 });
 
@@ -308,8 +323,8 @@ export const BoardActionDangerButton = styled('button', {
 
 export const ReadyButton = styled('button', {
   base: {
-    padding: '10px 24px',
-    fontSize: '14px',
+    padding: '8px 16px',
+    fontSize: '13px',
     fontWeight: 'bold',
     color: 'white',
     border: 'none',
@@ -321,8 +336,8 @@ export const ReadyButton = styled('button', {
       cursor: 'not-allowed',
     },
     md: {
-      padding: '12px 32px',
-      fontSize: '18px',
+      padding: '10px 20px',
+      fontSize: '14px',
     },
   },
   variants: {
@@ -582,11 +597,11 @@ export const CountdownNumber = styled('div', {
 
 export const CountdownText = styled('p', {
   base: {
-    fontSize: '20px',
+    fontSize: '14px',
     color: 'white',
     marginTop: '16px',
     md: {
-      fontSize: '28px',
+      fontSize: '16x',
     },
   },
 });
@@ -1126,7 +1141,7 @@ export const ConfirmDialogButtons = styled('div', {
   },
 });
 
-// 관리자 게임 초기화 버튼 (화면 하단 고정)
+// 관리자 게임 초기화 버튼 (화면 하단 우측 고정)
 export const AdminResetButton = styled('button', {
   base: {
     position: 'fixed',
@@ -1146,6 +1161,40 @@ export const AdminResetButton = styled('button', {
     _hover: {
       backgroundColor: '#C73E3A',
       transform: 'scale(1.05)',
+    },
+    md: {
+      padding: '14px 24px',
+      fontSize: '16px',
+    },
+  },
+});
+
+// 관리자 강제 시작 버튼 (화면 하단 좌측 고정)
+export const AdminForceStartButton = styled('button', {
+  base: {
+    position: 'fixed',
+    bottom: '20px',
+    left: '20px',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#5865F2',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(88, 101, 242, 0.4)',
+    zIndex: 100,
+    _hover: {
+      backgroundColor: '#4752C4',
+      transform: 'scale(1.05)',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      transform: 'none',
+      backgroundColor: '#3F4147',
     },
     md: {
       padding: '14px 24px',

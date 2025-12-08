@@ -92,7 +92,7 @@ export const PlayerInfo = styled('div', {
     alignItems: 'center',
     gap: '6px',
     flex: 1,
-    marginRight: '8px',
+    marginLeft: '8px',
     md: {
       gap: '8px',
     },

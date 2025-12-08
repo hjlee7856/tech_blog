@@ -5,7 +5,6 @@ import {
   getGameState,
   getOnlinePlayersRanking,
   nextTurn,
-  resetGame,
   subscribeToGameState,
   subscribeToPlayers,
   updateOnlineStatus,
@@ -81,45 +80,37 @@ export function useGameData({
     const playersSubscription = subscribeToPlayers((playerList) => {
       setPlayers(playerList);
 
-      const onlineActivePlayers = playerList.filter(
-        (p) => p.is_online && p.order > 0,
-      );
+      // const onlineActivePlayers = playerList.filter(
+      //   (p) => p.is_online && p.order > 0,
+      // );
 
       // 혼자 남으면 게임 리셋 (중복 호출 방지)
-      if (onlineActivePlayers.length <= 1) {
-        void getGameState().then((state) => {
-          if (
-            state?.is_started &&
-            !state.is_finished &&
-            !isResettingRef.current
-          ) {
-            isResettingRef.current = true;
-            onAloneInGameRef.current();
-            void resetGame().finally(() => {
-              setTimeout(() => {
-                isResettingRef.current = false;
-              }, 1000);
-            });
-          }
-        });
-        return;
-      }
+      // if (onlineActivePlayers.length <= 1) {
+      //   void getGameState().then((state) => {
+      //     if (
+      //       state?.is_started &&
+      //       !state.is_finished &&
+      //       !isResettingRef.current
+      //     ) {
+      //       isResettingRef.current = true;
+      //       onAloneInGameRef.current();
+      //       void resetGame().finally(() => {
+      //         setTimeout(() => {
+      //           isResettingRef.current = false;
+      //         }, 1000);
+      //       });
+      //     }
+      //   });
+      //   return;
+      // }
 
-      // 오프라인이거나 게임 미참여(order=0) 플레이어 턴 스킵
+      // 플레이어 변경 시에만 턴 체크 (오프라인이거나 게임 미참여 플레이어 턴 스킵)
       void checkAndSkipInvalidTurn(playerList);
     });
-
-    // 3초마다 턴 체크 (잘못된 턴 수정)
-    const turnCheckInterval = setInterval(() => {
-      void getAllPlayers().then((playerList) => {
-        void checkAndSkipInvalidTurn(playerList);
-      });
-    }, 3000);
 
     return () => {
       void gameSubscription.unsubscribe();
       void playersSubscription.unsubscribe();
-      clearInterval(turnCheckInterval);
     };
 
     // 유효하지 않은 턴 스킵 함수
@@ -133,11 +124,12 @@ export function useGameData({
         (p) => p.order === state.current_order,
       );
 
-      // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우 스킵
+      // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우에만 스킵
+      // 단, 현재 턴 플레이어가 존재하고 온라인이며 order > 0이면 스킵하지 않음
       const shouldSkip =
         !currentTurnPlayer ||
         !currentTurnPlayer.is_online ||
-        currentTurnPlayer.order === 0;
+        currentTurnPlayer.order <= 0;
 
       if (shouldSkip) {
         isSkippingTurnRef.current = true;

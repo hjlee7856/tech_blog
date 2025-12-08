@@ -280,22 +280,6 @@ export function AdminPanel({ characterNames }: AdminPanelProps) {
               >
                 <PlayerInfo>
                   <PlayerName>
-                    {player.name} {player.is_admin && '👑'}
-                  </PlayerName>
-                  <PlayerScore>🏆 빙고: {player.score}줄</PlayerScore>
-                  <PlayerStatus>
-                    {player.is_online ? '🟢' : '⚪'}{' '}
-                    {player.board.length === 25
-                      ? '✅ 보드 완성'
-                      : `⏳ 보드 ${player.board.length}/25`}
-                    {player.is_ready && ' | ✅ 준비완료'}
-                    {player.order > 0 && ` | 순서: ${player.order}`}
-                  </PlayerStatus>
-                </PlayerInfo>
-                <PlayerActions>
-                  <DeleteButton
-                    onClick={() => handleLogoffPlayer(player.id, player.name)}
-                  >
                     로그오프
                   </DeleteButton>
                 </PlayerActions>

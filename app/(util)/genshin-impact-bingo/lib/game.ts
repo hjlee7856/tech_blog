@@ -66,7 +66,9 @@ export async function startGame(forceStart = false): Promise<{
   // 온라인이고 보드가 완성된 플레이어들에게 랜덤 순서 부여
   const players = await getAllPlayers();
   const eligiblePlayers = players.filter(
-    (p) => p.board.length === 25 && p.is_online,
+    (p) =>
+      p.board.filter((item) => item !== null && item !== '').length === 25 &&
+      p.is_online,
   );
 
   if (eligiblePlayers.length === 0) {
@@ -230,7 +232,7 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
     // 약간의 딜레이 후 플래그 해제 (다른 클라이언트의 중복 호출 방지)
     setTimeout(() => {
       isNextTurnInProgress = false;
-    }, 500);
+    }, 1000);
   }
 }
 
@@ -309,7 +311,7 @@ export async function getPlayersRanking(): Promise<Player[]> {
 }
 
 // 온라인 플레이어만 조회 (순위용)
-// 25칸 완성자(board_complete)가 최우선, 그 다음 score 기준
+// 25칸 완성자(12줄 빙고)가 최우선, 그 다음 score 기준
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')
@@ -323,8 +325,12 @@ export async function getOnlinePlayersRanking(): Promise<Player[]> {
   // 25칸 완성자를 최우선으로 정렬
   const players = (data || []) as Player[];
   return players.toSorted((a, b) => {
-    const aComplete = a.board.length === 25 && a.score === 12;
-    const bComplete = b.board.length === 25 && b.score === 12;
+    // 실제 캐릭터 수 확인
+    const aValidBoard = a.board.filter((item) => item !== null && item !== '');
+    const bValidBoard = b.board.filter((item) => item !== null && item !== '');
+
+    const aComplete = aValidBoard.length === 25 && a.score === 12;
+    const bComplete = bValidBoard.length === 25 && b.score === 12;
 
     // 25칸 완성자(12줄)가 최우선
     if (aComplete && !bComplete) return -1;
@@ -397,7 +403,10 @@ export async function checkAndUpdateAllScores(
   const players = await getAllPlayers();
 
   for (const player of players) {
-    if (player.board.length === 25) {
+    const validBoard = player.board.filter(
+      (item) => item !== null && item !== '',
+    );
+    if (validBoard.length === 25) {
       const bingoCount = countBingoLines(player.board, drawnNames);
       if (bingoCount !== player.score) {
         await updatePlayerScore(player.id, bingoCount);
@@ -532,29 +541,56 @@ export function checkBoardComplete(
   return board.every((name) => drawnNames.includes(name));
 }
 
-// 12줄 빙고 체크 (25칸 모두 채워짐)
+// 12줄 빙고 체크 (25칸 모두 뽑혔는지 확인)
 export function checkFullBingo(board: string[], drawnNames: string[]): boolean {
-  if (board.length !== 25) return false;
+  // 보드의 실제 캐릭터 수 확인
+  const validBoard = board.filter((item) => item !== null && item !== '');
+  if (validBoard.length !== 25) return false;
+
+  // 보드의 모든 캐릭터가 뽑혔는지 확인
+  const allDrawn = validBoard.every((name) => drawnNames.includes(name));
+  if (!allDrawn) return false;
+
+  // 12줄 빙고 확인
   const bingoCount = countBingoLines(board, drawnNames);
   return bingoCount === 12; // 12줄 = 가로5 + 세로5 + 대각선2
 }
 
 // 모든 플레이어의 보드 완성 체크 및 게임 종료 처리
-// 12줄(25칸) 먼저 채우는 사람이 승리
+// 25칸 모두 뽑힌 사람이 먼저 나오면 즉시 승리 (12줄 빙고)
+// 동시에 완성한 경우 공동 1등 처리
 export async function checkGameFinish(
   drawnNames: string[],
 ): Promise<{ finished: boolean; winnerId?: number }> {
   const players = await getAllPlayers();
 
-  for (const player of players) {
-    if (player.board.length === 25 && player.order > 0) {
-      // 12줄 빙고 체크 (25칸 모두 채워짐)
+  // 게임 참여 중인 플레이어만 체크 (order > 0)
+  const activePlayers = players.filter((p) => p.order > 0);
+
+  // 12빙고를 완성한 모든 플레이어 찾기
+  const winners: number[] = [];
+
+  for (const player of activePlayers) {
+    // 보드의 실제 캐릭터 수 확인
+    const validBoard = player.board.filter(
+      (item) => item !== null && item !== '',
+    );
+
+    // 25칸이 모두 채워져 있고, 모든 캐릭터가 뽑혔는지 확인
+    if (validBoard.length === 25) {
       const isFullBingo = checkFullBingo(player.board, drawnNames);
       if (isFullBingo) {
-        await finishGame(player.id);
-        return { finished: true, winnerId: player.id };
+        winners.push(player.id);
       }
     }
+  }
+
+  // 승자가 있으면 게임 종료
+  if (winners.length > 0) {
+    // 첫 번째 승자를 대표로 게임 종료 (공동 1등인 경우에도 동일)
+    const winnerId = winners[0]!; // 배열이 비어있지 않으므로 안전
+    await finishGame(winnerId);
+    return { finished: true, winnerId };
   }
 
   return { finished: false };
@@ -632,7 +668,9 @@ export async function requestStartGame(
   const players = await getAllPlayers();
   const onlinePlayers = players.filter((p) => p.is_online);
   const readyPlayers = onlinePlayers.filter(
-    (p) => p.is_ready && p.board.length === 25,
+    (p) =>
+      p.is_ready &&
+      p.board.filter((item) => item !== null && item !== '').length === 25,
   );
 
   if (readyPlayers.length < 2) {
@@ -687,7 +725,10 @@ export async function agreeToStartGame(
   // 모든 온라인 준비 유저가 동의했는지 확인
   const players = await getAllPlayers();
   const readyOnlinePlayers = players.filter(
-    (p) => p.is_online && p.is_ready && p.board.length === 25,
+    (p) =>
+      p.is_online &&
+      p.is_ready &&
+      p.board.filter((item) => item !== null && item !== '').length === 25,
   );
   const allAgreed = readyOnlinePlayers.every((p) =>
     newAgreedUsers.includes(p.id),
@@ -769,7 +810,10 @@ export async function validateStartRequest(): Promise<{
 
   const players = await getAllPlayers();
   const readyOnlinePlayers = players.filter(
-    (p) => p.is_online && p.is_ready && p.board.length === 25,
+    (p) =>
+      p.is_online &&
+      p.is_ready &&
+      p.board.filter((item) => item !== null && item !== '').length === 25,
   );
 
   // 요청자가 오프라인이면 요청 취소
@@ -796,7 +840,11 @@ export async function validateStartRequest(): Promise<{
   // 오프라인이 된 유저를 동의 목록에서 제외
   const onlineAgreedUsers = gameState.start_agreed_users.filter((userId) => {
     const player = players.find((p) => p.id === userId);
-    return player?.is_online && player?.is_ready && player?.board.length === 25;
+    return (
+      player?.is_online &&
+      player?.is_ready &&
+      player?.board.filter((item) => item !== null && item !== '').length === 25
+    );
   });
 
   // 동의 목록이 변경되었으면 업데이트

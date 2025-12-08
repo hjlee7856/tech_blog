@@ -176,11 +176,17 @@ export function SpectatorPanel() {
                       )}
                     </PlayerName>
                     <PlayerStatus>
-                      {player.board.length === 25
+                      {player.board.filter(
+                        (item) => item !== null && item !== '',
+                      ).length === 25
                         ? player.is_ready
                           ? '준비 완료'
                           : '보드 완성'
-                        : `보드 ${player.board.length}/25`}
+                        : `보드 ${
+                            player.board.filter(
+                              (item) => item !== null && item !== '',
+                            ).length
+                          }/25`}
                     </PlayerStatus>
                   </PlayerInfo>
                   <PlayerScore>{player.score}줄</PlayerScore>

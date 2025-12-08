@@ -36,9 +36,11 @@ function getRank(index: number, players: Player[]): number {
   if (!prevPlayer || !currentPlayer) return index + 1;
 
   const prevComplete =
-    prevPlayer.board.length === 25 && prevPlayer.score === 12;
+    prevPlayer.board.filter((item) => item !== null && item !== '').length ===
+      25 && prevPlayer.score === 12;
   const currentComplete =
-    currentPlayer.board.length === 25 && currentPlayer.score === 12;
+    currentPlayer.board.filter((item) => item !== null && item !== '')
+      .length === 25 && currentPlayer.score === 12;
 
   // 완성 상태와 점수가 같으면 동일 순위
   if (
@@ -114,7 +116,7 @@ export function FinishModal({
     <ModalOverlay>
       <ModalContent>
         <ModalTitle>게임 종료!</ModalTitle>
-        {isWinner && <WinnerName>님 축하합니다! 우승하셨습니다!</WinnerName>}
+        {isWinner && <WinnerName>축하합니다! 우승하셨습니다!</WinnerName>}
         <RankingList>
           {topPlayers.map((player) => {
             const playerIndex = finalRanking.findIndex(
@@ -146,7 +148,7 @@ export function FinishModal({
         </RankingList>
 
         {myRank !== null && (
-          <MyRankDisplay>
+          <MyRankDisplay style={{ marginBottom: '16px' }}>
             내 순위: {myRank}위 ({finalRanking[myIndex]?.score ?? 0}줄)
           </MyRankDisplay>
         )}
@@ -158,7 +160,7 @@ export function FinishModal({
         )}
 
         {!isAdmin && (
-          <CountdownText style={{ marginTop: '16px', color: '#888' }}>
+          <CountdownText style={{ color: '#888' }}>
             관리자가 게임을 초기화할 때까지 대기 중...
           </CountdownText>
         )}

@@ -21,7 +21,8 @@ import {
   ConfirmButton,
   Container,
   DrawConfirmButtons,
-  DrawConfirmSection,
+  DrawConfirmModal,
+  DrawConfirmOverlay,
   DrawConfirmText,
   MatchedCell,
   SelectableCell,
@@ -44,6 +45,7 @@ interface BingoBoardProps {
   isDrawing?: boolean; // 뽑기 진행 중인지
   onSelectForDraw?: (name: string) => void; // 뽑기용 선택 콜백
   onRegisterActions?: (actions: BingoBoardActions | null) => void;
+  onBoardChange?: (board: (string | null)[]) => void; // 보드 상태 변경 콜백
 }
 
 export function BingoBoard({
@@ -57,6 +59,7 @@ export function BingoBoard({
   isDrawing = false,
   onSelectForDraw,
   onRegisterActions,
+  onBoardChange,
 }: BingoBoardProps) {
   // 초기값은 빈 보드로 시작, DB에서 로드 후 업데이트
   const [board, setBoard] = useState<(string | null)[]>(
@@ -99,25 +102,33 @@ export function BingoBoard({
       const savedBoard: string[] = await getPlayerBoard(userId);
       if (isCancelled) return;
 
-      if (savedBoard.length === 25) {
-        isSyncingFromServerRef.current = true;
-        setBoard(savedBoard);
-      } else if (savedBoard.length > 0) {
+      // 실제 캐릭터가 있는지 확인 (빈 문자열 제외)
+      const validNames = savedBoard.filter(
+        (name) => name !== '' && name !== null,
+      );
+
+      if (savedBoard.length === 25 && validNames.length > 0) {
+        // 빈 문자열을 null로 변환
+        setBoard(savedBoard.map((name) => (name === '' ? null : name)));
+      } else if (savedBoard.length > 0 && validNames.length > 0) {
         // 부분적으로 저장된 보드가 있으면 복원
         const newBoard: (string | null)[] = Array.from<string | null>({
           length: 25,
         }).fill(null);
         for (const [idx, name] of savedBoard.entries()) {
-          if (idx < 25) newBoard[idx] = name;
+          if (idx < 25) newBoard[idx] = name === '' ? null : name;
         }
-        isSyncingFromServerRef.current = true;
         setBoard(newBoard);
       } else {
-        // DB에 보드가 없으면 로컬도 초기화
-        isSyncingFromServerRef.current = true;
+        // DB에 보드가 없거나 모두 빈 문자열이면 로컬도 초기화
         setBoard(Array.from<string | null>({ length: 25 }).fill(null));
       }
-      setIsLoaded(true);
+
+      // 로드 완료 후 동기화 플래그 설정
+      setTimeout(() => {
+        isSyncingFromServerRef.current = false;
+        setIsLoaded(true);
+      }, 100);
     };
     void loadBoard();
 
@@ -131,17 +142,23 @@ export function BingoBoard({
     const subscription = subscribeToPlayerBoard(userId, (newBoard) => {
       if (isApplyingLocalChangeRef.current) return;
 
-      isSyncingFromServerRef.current = true;
+      // 실제 캐릭터가 있는지 확인 (빈 문자열 제외)
+      const validNames = newBoard.filter(
+        (name) => name !== '' && name !== null,
+      );
 
-      if (newBoard.length === 0) {
-        // 보드가 초기화되면 로컬도 초기화
+      if (newBoard.length === 0 || validNames.length === 0) {
+        // 보드가 초기화되었거나 모두 빈 문자열이면 로컬도 초기화
         setBoard(Array.from<string | null>({ length: 25 }).fill(null));
         setIsLoaded(false);
+        isSyncingFromServerRef.current = false;
         return;
       }
 
       if (newBoard.length === 25) {
-        setBoard(newBoard);
+        // 빈 문자열을 null로 변환
+        setBoard(newBoard.map((name) => (name === '' ? null : name)));
+        isSyncingFromServerRef.current = false;
         return;
       }
 
@@ -149,9 +166,10 @@ export function BingoBoard({
         length: 25,
       }).fill(null);
       for (const [idx, name] of newBoard.entries()) {
-        if (idx < 25) partialBoard[idx] = name;
+        if (idx < 25) partialBoard[idx] = name === '' ? null : name;
       }
       setBoard(partialBoard);
+      isSyncingFromServerRef.current = false;
     });
 
     return () => {
@@ -168,20 +186,32 @@ export function BingoBoard({
       return;
     }
 
+    if (isApplyingLocalChangeRef.current) {
+      isApplyingLocalChangeRef.current = false;
+      // 플래그만 리셋하고 저장은 계속 진행
+    }
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     const timeoutId = setTimeout(() => {
       void (async () => {
-        const validBoard = board.filter(
-          (name): name is string => name !== null,
-        );
-        await saveBoard(userId, validBoard);
+        // 보드가 완전히 비어있으면 빈 배열로 저장
+        const validCount = board.filter(
+          (name) => name !== null && name !== '',
+        ).length;
 
-        if (validBoard.length < 25) {
+        if (validCount === 0) {
+          await saveBoard(userId, []);
+        } else {
+          // null을 빈 문자열로 변환하여 인덱스 유지
+          const boardToSave = board.map((name) => name ?? '');
+          await saveBoard(userId, boardToSave);
+        }
+
+        if (validCount < 25) {
           await setReadyFalse(userId);
         }
 
-        isApplyingLocalChangeRef.current = false;
         saveTimeoutRef.current = null;
       })();
     }, 200);
@@ -214,8 +244,11 @@ export function BingoBoard({
   );
   const availableNames = characterNames.filter((name) => !usedNames.has(name));
 
-  // 게임 참여 전(order === 0)이면 게임 중에도 보드 수정 가능
-  const canEditBoard = !isGameStarted || playerOrder === 0;
+  // 게임 참여 전(order === 0) 또는 보드 미완성 시 게임 중에도 보드 수정 가능
+  const canEditBoard =
+    !isGameStarted ||
+    playerOrder === 0 ||
+    board.filter((name) => name !== null).length < 25;
 
   const handleCellClick = useCallback(
     (index: number) => {
@@ -257,12 +290,16 @@ export function BingoBoard({
     applyBoardUpdate(() => shuffled.slice(0, 25));
   }, [canEditBoard, characterNames, applyBoardUpdate]);
 
-  const handleClearAll = useCallback(() => {
+  const handleClearAll = useCallback(async () => {
     if (!canEditBoard) return;
-    applyBoardUpdate(() =>
-      Array.from<string | null>({ length: 25 }).fill(null),
-    );
-  }, [canEditBoard, applyBoardUpdate]);
+    // 보드 초기화 시 빈 배열로 저장
+    await saveBoard(userId, []);
+    // 준비 상태 해제
+    await setReadyFalse(userId);
+    // 서버 동기화 플래그 설정하여 자동 저장 방지
+    isSyncingFromServerRef.current = true;
+    setBoard(Array.from<string | null>({ length: 25 }).fill(null));
+  }, [canEditBoard, userId]);
 
   // 액션 등록 (부모 컴포넌트에서 사용)
   useEffect(() => {
@@ -273,6 +310,13 @@ export function BingoBoard({
     });
     return () => onRegisterActions(null);
   }, [handleRandomFill, handleClearAll, onRegisterActions]);
+
+  // 보드 상태 변경 시 부모에게 알림
+  useEffect(() => {
+    if (onBoardChange) {
+      onBoardChange(board);
+    }
+  }, [board, onBoardChange]);
 
   // 완성된 빙고 라인에 포함된 셀 인덱스 계산
   const bingoLineCells = useMemo(() => {
@@ -479,29 +523,33 @@ export function BingoBoard({
         })}
       </Board>
 
-      {/* 뽑기 확인 섹션 */}
+      {/* 뽑기 확인 모달 */}
       {isMyTurn && selectedForDraw && (
-        <DrawConfirmSection>
-          <DrawConfirmText>
-            <strong>{selectedForDraw}</strong>을(를) 뽑으시겠습니까?
-          </DrawConfirmText>
-          <DrawConfirmButtons>
-            <ConfirmButton
-              onClick={() => {
-                if (onSelectForDraw && !isDrawing) {
-                  onSelectForDraw(selectedForDraw);
-                  setSelectedForDraw(null);
-                }
-              }}
-              disabled={isDrawing}
-            >
-              {isDrawing ? '뽑는 중...' : '확인'}
-            </ConfirmButton>
-            <CancelButton onClick={() => setSelectedForDraw(null)}>
-              취소
-            </CancelButton>
-          </DrawConfirmButtons>
-        </DrawConfirmSection>
+        <DrawConfirmOverlay onClick={() => setSelectedForDraw(null)}>
+          <DrawConfirmModal
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <DrawConfirmText>
+              <strong>{selectedForDraw}</strong>을(를) 뽑으시겠습니까?
+            </DrawConfirmText>
+            <DrawConfirmButtons>
+              <ConfirmButton
+                onClick={() => {
+                  if (onSelectForDraw && !isDrawing) {
+                    onSelectForDraw(selectedForDraw);
+                    setSelectedForDraw(null);
+                  }
+                }}
+                disabled={isDrawing}
+              >
+                {isDrawing ? '뽑는 중...' : '확인'}
+              </ConfirmButton>
+              <CancelButton onClick={() => setSelectedForDraw(null)}>
+                취소
+              </CancelButton>
+            </DrawConfirmButtons>
+          </DrawConfirmModal>
+        </DrawConfirmOverlay>
       )}
 
       {canEditBoard && (

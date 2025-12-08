@@ -27,6 +27,7 @@ import { LoginModal } from '../LoginModal';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
+  AdminForceStartButton,
   AdminResetButton,
   BoardActionButton,
   BoardActionDangerButton,
@@ -36,7 +37,6 @@ import {
   ConfirmDialogText,
   ConfirmDialogTitle,
   Container,
-  DrawButton,
   DrawnNameDisplay,
   DrawnNamesList,
   DrawnNamesSection,
@@ -58,9 +58,11 @@ import {
   UserName,
 } from './BingoGame.styles';
 
+import { playSelectSound } from '../../lib/sounds';
 import { Chat } from '../Chat';
+import { ReadyStatus } from '../ReadyStatus';
 import { useGameData, useOnlineStatus } from './hooks';
-import { AloneModal, FinishModal } from './modals';
+import { FinishModal } from './modals';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -75,7 +77,6 @@ export function BingoGame({
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showAloneModal, setShowAloneModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBoardClearConfirm, setShowBoardClearConfirm] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -83,6 +84,7 @@ export function BingoGame({
   const [boardActions, setBoardActions] = useState<BingoBoardActions | null>(
     null,
   );
+  const [localBoard, setLocalBoard] = useState<(string | null)[]>([]);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
   // 콜백 메모이제이션 (재구독 방지)
@@ -92,8 +94,7 @@ export function BingoGame({
   }, []);
 
   const handleAloneInGame = useCallback(() => {
-    setShowAloneModal(true);
-    setTimeout(() => setShowAloneModal(false), 3000);
+    // 혼자 남음 기능 비활성화됨
   }, []);
 
   // 게임 데이터 훅
@@ -118,7 +119,10 @@ export function BingoGame({
     if (isStartingRef.current) return;
 
     const readyOnlinePlayers = players.filter(
-      (p) => p.is_online && p.is_ready && p.board.length === 25,
+      (p) =>
+        p.is_online &&
+        p.is_ready &&
+        p.board.filter((item) => item !== null && item !== '').length === 25,
     );
 
     if (readyOnlinePlayers.length >= 2) {
@@ -171,6 +175,7 @@ export function BingoGame({
     if (!gameState || isDrawing) return;
 
     setIsDrawing(true);
+    playSelectSound(); // 선택 효과음
 
     // 선택한 이름을 drawn_names에 추가
     const newDrawnNames = [...gameState.drawn_names, selectedName];
@@ -226,6 +231,15 @@ export function BingoGame({
     (p) => p.order === gameState?.current_order,
   );
 
+  // 내 턴이 되었을 때 효과음 재생
+  const prevIsMyTurnRef = useRef(false);
+  useEffect(() => {
+    // if (isMyTurn && !prevIsMyTurnRef.current) {
+    //   playMyTurnSound();
+    // }
+    prevIsMyTurnRef.current = isMyTurn ?? false;
+  }, [isMyTurn]);
+
   // 다음 턴 플레이어 계산
   const nextTurnPlayer = useMemo(() => {
     if (!gameState?.is_started) return null;
@@ -247,8 +261,12 @@ export function BingoGame({
     const rankedPlayers = players
       .filter((p) => p.is_online && p.order > 0)
       .toSorted((a, b) => {
-        const aComplete = a.board.length === 25 && a.score === 12;
-        const bComplete = b.board.length === 25 && b.score === 12;
+        const aComplete =
+          a.board.filter((item) => item !== null && item !== '').length ===
+            25 && a.score === 12;
+        const bComplete =
+          b.board.filter((item) => item !== null && item !== '').length ===
+            25 && b.score === 12;
         if (aComplete !== bComplete) return bComplete ? 1 : -1;
         return b.score - a.score;
       });
@@ -261,8 +279,12 @@ export function BingoGame({
       const prev = rankedPlayers[i];
       const curr = rankedPlayers[i + 1];
       if (!prev || !curr) continue;
-      const prevComplete = prev.board.length === 25 && prev.score === 12;
-      const currComplete = curr.board.length === 25 && curr.score === 12;
+      const prevComplete =
+        prev.board.filter((item) => item !== null && item !== '').length ===
+          25 && prev.score === 12;
+      const currComplete =
+        curr.board.filter((item) => item !== null && item !== '').length ===
+          25 && curr.score === 12;
       if (prev.score !== curr.score || prevComplete !== currComplete) {
         rank = i + 2;
       }
@@ -323,6 +345,11 @@ export function BingoGame({
             </StatusText>
           </GameStatus>
           <BoardActions>
+            <BoardActionDangerButton
+              onClick={() => setShowBoardClearConfirm(true)}
+            >
+              보드 초기화
+            </BoardActionDangerButton>
             {!myPlayer?.is_ready && (
               <BoardActionButton onClick={() => boardActions?.fillRandom()}>
                 랜덤 채우기
@@ -331,17 +358,13 @@ export function BingoGame({
             <ReadyButton
               isReady={myPlayer?.is_ready ?? false}
               onClick={handleToggleReady}
-              disabled={myPlayer?.board.length !== 25}
+              disabled={
+                localBoard.filter((item) => item !== null && item !== '')
+                  .length !== 25
+              }
             >
               {myPlayer?.is_ready ? '준비 완료!' : '준비하기'}
             </ReadyButton>
-            {!myPlayer?.is_ready && myPlayer?.board.length === 25 && (
-              <BoardActionDangerButton
-                onClick={() => setShowBoardClearConfirm(true)}
-              >
-                보드 초기화
-              </BoardActionDangerButton>
-            )}
           </BoardActions>
         </ReadySection>
       )}
@@ -385,22 +408,29 @@ export function BingoGame({
               {` 님이 이름을 뽑고 있습니다.`}
             </TurnInfo>
           )}
-          {!isMyTurn &&
-            myPlayer?.order === 0 &&
-            myPlayer?.board.length === 25 && (
-              <>
-                <TurnInfo>현재 게임이 진행 중 입니다!</TurnInfo>
-                <DrawButton onClick={handleJoinGame}>게임 참여하기</DrawButton>
-              </>
-            )}
-          {!isMyTurn &&
-            myPlayer?.order === 0 &&
-            myPlayer?.board.length !== 25 && (
+          {!isMyTurn && myPlayer?.order === 0 && (
+            <>
               <TurnInfo>
-                보드를 완성하면 게임에 참여할 수 있습니다 (
-                {myPlayer?.board.length ?? 0}/25)
+                {`보드를 완성하면 게임에 참여할 수 있습니다 (${localBoard.filter((item) => item !== null && item !== '').length}/25)`}
               </TurnInfo>
-            )}
+              <BoardActions>
+                <BoardActionDangerButton
+                  onClick={() => setShowBoardClearConfirm(true)}
+                >
+                  보드 초기화
+                </BoardActionDangerButton>
+                <BoardActionButton onClick={() => boardActions?.fillRandom()}>
+                  랜덤 채우기
+                </BoardActionButton>
+                {localBoard.filter((item) => item !== null && item !== '')
+                  .length === 25 && (
+                  <BoardActionButton onClick={handleJoinGame}>
+                    게임 참여하기
+                  </BoardActionButton>
+                )}
+              </BoardActions>
+            </>
+          )}
         </TurnSection>
       )}
 
@@ -415,6 +445,7 @@ export function BingoGame({
         isDrawing={isDrawing}
         onSelectForDraw={(name) => void handleSelectDraw(name)}
         onRegisterActions={setBoardActions}
+        onBoardChange={setLocalBoard}
       />
 
       {/* 채팅 */}
@@ -427,8 +458,12 @@ export function BingoGame({
         isGameStarted={gameState?.is_started}
       />
 
-      {/* 실시간 순위 목록 */}
-      <Ranking isGameStarted={gameState?.is_started} userId={user.id} />
+      {/* 게임 시작 전: 준비 상태, 게임 시작 후: 실시간 순위 */}
+      {!gameState?.is_started ? (
+        <ReadyStatus userId={user.id} />
+      ) : (
+        <Ranking isGameStarted={gameState?.is_started} userId={user.id} />
+      )}
 
       {/* 뽑은 이름 목록 */}
       {gameState?.is_started && gameState.drawn_names.length > 0 && (
@@ -469,13 +504,29 @@ export function BingoGame({
       />
 
       {/* 혼자 남음 모달 */}
-      <AloneModal isOpen={showAloneModal} />
+      {/* <AloneModal isOpen={showAloneModal} /> */}
 
-      {/* 관리자 게임 초기화 버튼 */}
-      {user.is_admin && !gameState?.is_started && (
+      {/* 관리자 게임 초기화 버튼 (우측 하단 고정) */}
+      {user.is_admin && (
         <AdminResetButton onClick={() => setShowResetConfirm(true)}>
           게임 초기화
         </AdminResetButton>
+      )}
+
+      {/* 관리자 강제 시작 버튼 (좌측 하단 고정, 게임 대기 중에만 표시) */}
+      {user.is_admin && !gameState?.is_started && (
+        <AdminForceStartButton
+          onClick={() => void startGame(true)}
+          disabled={
+            players.filter(
+              (p) =>
+                p.board.filter((item) => item !== null && item !== '')
+                  .length === 25,
+            ).length < 2
+          }
+        >
+          강제 시작
+        </AdminForceStartButton>
       )}
 
       {/* 보드 초기화 확인 모달 */}
