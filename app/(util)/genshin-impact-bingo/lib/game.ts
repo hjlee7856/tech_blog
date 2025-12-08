@@ -23,6 +23,8 @@ export interface Player extends User {
   is_ready: boolean;
   is_online: boolean;
   last_seen: string;
+  bingo_message: string | null;
+  bingo_message_at: string | null;
 }
 
 const GAME_STATE_ID = 1;
@@ -279,17 +281,30 @@ export async function getPlayersRanking(): Promise<Player[]> {
 }
 
 // 온라인 플레이어만 조회 (순위용)
+// 25칸 완성자(board_complete)가 최우선, 그 다음 score 기준
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')
     .select(
       'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
     )
-    .eq('is_online', true)
-    .order('score', { ascending: false });
+    .eq('is_online', true);
 
   if (error) return [];
-  return (data || []) as Player[];
+
+  // 25칸 완성자를 최우선으로 정렬
+  const players = (data || []) as Player[];
+  return players.toSorted((a, b) => {
+    const aComplete = a.board.length === 25 && a.score === 12;
+    const bComplete = b.board.length === 25 && b.score === 12;
+
+    // 25칸 완성자(12줄)가 최우선
+    if (aComplete && !bComplete) return -1;
+    if (!aComplete && bComplete) return 1;
+
+    // 그 외에는 score 기준
+    return b.score - a.score;
+  });
 }
 
 export async function deletePlayer(userId: number): Promise<boolean> {
@@ -480,7 +495,7 @@ export async function finishGame(winnerId: number): Promise<boolean> {
   return !playerError;
 }
 
-// 25칸 완성 체크
+// 25칸 완성 체크 (모든 칸이 뽑힌 이름에 포함 = 12줄 빙고)
 export function checkBoardComplete(
   board: string[],
   drawnNames: string[],
@@ -489,7 +504,15 @@ export function checkBoardComplete(
   return board.every((name) => drawnNames.includes(name));
 }
 
+// 12줄 빙고 체크 (25칸 모두 채워짐)
+export function checkFullBingo(board: string[], drawnNames: string[]): boolean {
+  if (board.length !== 25) return false;
+  const bingoCount = countBingoLines(board, drawnNames);
+  return bingoCount === 12; // 12줄 = 가로5 + 세로5 + 대각선2
+}
+
 // 모든 플레이어의 보드 완성 체크 및 게임 종료 처리
+// 12줄(25칸) 먼저 채우는 사람이 승리
 export async function checkGameFinish(
   drawnNames: string[],
 ): Promise<{ finished: boolean; winnerId?: number }> {
@@ -497,8 +520,9 @@ export async function checkGameFinish(
 
   for (const player of players) {
     if (player.board.length === 25 && player.order > 0) {
-      const isComplete = checkBoardComplete(player.board, drawnNames);
-      if (isComplete) {
+      // 12줄 빙고 체크 (25칸 모두 채워짐)
+      const isFullBingo = checkFullBingo(player.board, drawnNames);
+      if (isFullBingo) {
         await finishGame(player.id);
         return { finished: true, winnerId: player.id };
       }
@@ -756,4 +780,98 @@ export async function validateStartRequest(): Promise<{
   }
 
   return { valid: true, cancelled: false };
+}
+
+// 빙고 자랑 메시지 전송
+export async function sendBingoMessage(
+  userId: number,
+  message: string,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({
+      bingo_message: message,
+      bingo_message_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  return !error;
+}
+
+// 빙고 메시지 초기화
+export async function clearBingoMessage(userId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({
+      bingo_message: null,
+      bingo_message_at: null,
+    })
+    .eq('id', userId);
+
+  return !error;
+}
+
+// 채팅 메시지 인터페이스
+export interface ChatMessage {
+  id: number;
+  user_id: number;
+  user_name: string;
+  profile_image: string;
+  message: string;
+  is_boast: boolean;
+  rank?: number;
+  created_at: string;
+}
+
+// 채팅 메시지 전송
+export async function sendChatMessage(
+  userId: number,
+  userName: string,
+  profileImage: string,
+  message: string,
+  isBoast = false,
+  rank?: number,
+): Promise<boolean> {
+  const { error } = await supabase.from('genshin-bingo-chat').insert({
+    user_id: userId,
+    user_name: userName,
+    profile_image: profileImage,
+    message,
+    is_boast: isBoast,
+    rank: rank ?? null,
+  });
+
+  return !error;
+}
+
+// 채팅 메시지 조회 (최근 50개)
+export async function getChatMessages(): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from('genshin-bingo-chat')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) return [];
+  return (data as ChatMessage[]).toReversed();
+}
+
+// 채팅 메시지 실시간 구독
+export function subscribeToChatMessages(
+  callback: (messages: ChatMessage[]) => void,
+) {
+  // 초기 로드
+  void getChatMessages().then(callback);
+
+  return supabase
+    .channel('chat-messages')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'genshin-bingo-chat' },
+      async () => {
+        const messages = await getChatMessages();
+        callback(messages);
+      },
+    )
+    .subscribe();
 }

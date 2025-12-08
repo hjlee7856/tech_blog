@@ -9,25 +9,30 @@ import {
   updateProfileImage,
   type User,
 } from '../../lib/auth';
-import { createNameMap } from '../../lib/characterUtils';
 import {
   checkAndUpdateAllScores,
   checkGameFinish,
-  drawName,
   getAllPlayers,
   getOnlinePlayersRanking,
   joinGameInProgress,
   nextTurn,
+  resetGame,
   startGame,
   toggleReady,
   updateOnlineStatus,
   type Player,
 } from '../../lib/game';
 import { BingoBoard } from '../BingoBoard/BingoBoard';
+import { Chat } from '../Chat';
 import { LoginModal } from '../LoginModal';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
 import {
+  AdminResetButton,
+  ConfirmDialog,
+  ConfirmDialogButtons,
+  ConfirmDialogText,
+  ConfirmDialogTitle,
   Container,
   DrawButton,
   DrawnNameDisplay,
@@ -38,9 +43,12 @@ import {
   GameStatus,
   Header,
   LogoutButton,
+  ModalOverlay,
   ProfileImage,
   ReadyButton,
   ReadySection,
+  ResetButton,
+  RestartButton,
   StatusText,
   TurnInfo,
   TurnSection,
@@ -49,7 +57,7 @@ import {
 } from './BingoGame.styles';
 
 import { useGameData, useOnlineStatus } from './hooks';
-import { AloneModal, DrawModal, FinishModal } from './modals';
+import { AloneModal, FinishModal } from './modals';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -65,12 +73,9 @@ export function BingoGame({
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAloneModal, setShowAloneModal] = useState(false);
-  const [showDrawModal, setShowDrawModal] = useState(false);
-  const [drawnResult, setDrawnResult] = useState<string | null>(null);
-  const [drawMode, setDrawMode] = useState<'select' | 'random' | 'list'>(
-    'select',
-  );
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const drawnNamesListRef = useRef<HTMLDivElement>(null);
 
   // 콜백 메모이제이션 (재구독 방지)
@@ -95,12 +100,6 @@ export function BingoGame({
 
   const { user, setUser, gameState, players, setPlayers, isLoading } =
     useGameData(gameDataCallbacks);
-
-  // 한글-영어 이름 매핑
-  const nameMap = useMemo(
-    () => createNameMap(characterNames, characterEnNames),
-    [characterNames, characterEnNames],
-  );
 
   // 온라인 상태 관리 훅
   useOnlineStatus(user?.id);
@@ -143,54 +142,6 @@ export function BingoGame({
     setPlayers(playerList);
   };
 
-  const handleDrawName = async () => {
-    if (!gameState || isDrawing) return;
-
-    setIsDrawing(true);
-    setDrawnResult(null);
-    const result = await drawName(characterNames, gameState.drawn_names);
-
-    if (result.success && result.name) {
-      // 뽑은 결과 저장
-      setDrawnResult(result.name);
-
-      // 점수 업데이트
-      const newDrawnNames = [...gameState.drawn_names, result.name];
-
-      // 게임 종료 체크 (25칸 완성)
-      const finishResult = await checkGameFinish(newDrawnNames);
-      if (finishResult.finished) {
-        const ranking = await getOnlinePlayersRanking();
-        setFinalRanking(ranking);
-        setShowFinishModal(true);
-        setShowDrawModal(false);
-        setDrawnResult(null);
-        setIsDrawing(false);
-        return;
-      }
-
-      await checkAndUpdateAllScores(newDrawnNames);
-
-      // 다음 턴으로
-      const activePlayers = players.filter((p) => p.order > 0 && p.is_online);
-      if (activePlayers.length > 0) {
-        await nextTurn(activePlayers.length);
-      }
-
-      // 2초 후 자동 닫기
-      setTimeout(() => {
-        setShowDrawModal(false);
-        setDrawnResult(null);
-        setDrawMode('select');
-      }, 2000);
-    } else {
-      alert(result.error || '이름 뽑기에 실패했습니다.');
-      setShowDrawModal(false);
-    }
-
-    setIsDrawing(false);
-  };
-
   const handleProfileChange = async (englishName: string) => {
     if (!user) return;
     const success = await updateProfileImage(user.id, englishName);
@@ -213,7 +164,6 @@ export function BingoGame({
     if (!gameState || isDrawing) return;
 
     setIsDrawing(true);
-    setDrawnResult(null);
 
     // 선택한 이름을 drawn_names에 추가
     const newDrawnNames = [...gameState.drawn_names, selectedName];
@@ -226,17 +176,12 @@ export function BingoGame({
       .eq('id', 1);
 
     if (!error) {
-      setDrawnResult(selectedName);
-
       // 게임 종료 체크
       const finishResult = await checkGameFinish(newDrawnNames);
       if (finishResult.finished) {
         const ranking = await getOnlinePlayersRanking();
         setFinalRanking(ranking);
         setShowFinishModal(true);
-        setShowDrawModal(false);
-        setDrawnResult(null);
-        setDrawMode('select');
         setIsDrawing(false);
         return;
       }
@@ -248,20 +193,19 @@ export function BingoGame({
       if (activePlayers.length > 0) {
         await nextTurn(activePlayers.length);
       }
-
-      // 2초 후 자동 닫기
-      setTimeout(() => {
-        setShowDrawModal(false);
-        setDrawnResult(null);
-        setDrawMode('select');
-      }, 2000);
     } else {
       alert('이름 뽑기에 실패했습니다.');
-      setShowDrawModal(false);
-      setDrawMode('select');
     }
 
     setIsDrawing(false);
+  };
+
+  // 관리자 게임 초기화
+  const handleResetGame = async () => {
+    setIsResetting(true);
+    await resetGame();
+    setShowResetConfirm(false);
+    setIsResetting(false);
   };
 
   const lastDrawnName = gameState?.drawn_names.at(-1);
@@ -275,12 +219,49 @@ export function BingoGame({
     (p) => p.order === gameState?.current_order,
   );
 
-  // 자기 턴이 되면 자동으로 이름 뽑기 모달 열기
-  useEffect(() => {
-    if (isMyTurn && !isDrawing && !showDrawModal) {
-      setShowDrawModal(true);
+  // 다음 턴 플레이어 계산
+  const nextTurnPlayer = useMemo(() => {
+    if (!gameState?.is_started) return null;
+    const activePlayers = players
+      .filter((p) => p.order > 0 && p.is_online)
+      .toSorted((a, b) => a.order - b.order);
+    if (activePlayers.length === 0) return null;
+
+    const currentIdx = activePlayers.findIndex(
+      (p) => p.order === gameState.current_order,
+    );
+    const nextIdx = (currentIdx + 1) % activePlayers.length;
+    return activePlayers[nextIdx];
+  }, [gameState, players]);
+
+  // 내 순위 계산 (채팅 자랑용)
+  const myRank = useMemo(() => {
+    if (!user || !gameState?.is_started) return undefined;
+    const rankedPlayers = players
+      .filter((p) => p.is_online && p.order > 0)
+      .toSorted((a, b) => {
+        const aComplete = a.board.length === 25 && a.score === 12;
+        const bComplete = b.board.length === 25 && b.score === 12;
+        if (aComplete !== bComplete) return bComplete ? 1 : -1;
+        return b.score - a.score;
+      });
+    const myIndex = rankedPlayers.findIndex((p) => p.id === user.id);
+    if (myIndex === -1) return undefined;
+
+    // 공동 순위 계산
+    let rank = 1;
+    for (let i = 0; i < myIndex; i++) {
+      const prev = rankedPlayers[i];
+      const curr = rankedPlayers[i + 1];
+      if (!prev || !curr) continue;
+      const prevComplete = prev.board.length === 25 && prev.score === 12;
+      const currComplete = curr.board.length === 25 && curr.score === 12;
+      if (prev.score !== curr.score || prevComplete !== currComplete) {
+        rank = i + 2;
+      }
     }
-  }, [isMyTurn, isDrawing, showDrawModal]);
+    return rank;
+  }, [user, gameState?.is_started, players]);
 
   // 뽑은 이름 목록 자동 스크롤
   useEffect(() => {
@@ -356,18 +337,23 @@ export function BingoGame({
 
       {gameState?.is_started && (
         <TurnSection>
-          {!isMyTurn && (
+          {/* 현재 턴 / 다음 턴 표시 */}
+          <TurnInfo>
+            현재 턴: <strong>{currentTurnPlayer?.name || '대기 중'}</strong>
+            {nextTurnPlayer && nextTurnPlayer.id !== currentTurnPlayer?.id && (
+              <> → 다음 턴: {nextTurnPlayer.name}</>
+            )}
+          </TurnInfo>
+
+          {isMyTurn && (
+            <TurnInfo isMyTurn>
+              이름을 뽑을 차례입니다!{'\n'}보드에서 뽑을 이름을 선택하세요
+            </TurnInfo>
+          )}
+          {!isMyTurn && myPlayer?.order !== 0 && (
             <TurnInfo>
               {`${currentTurnPlayer?.name || '대기 중'} 님이 이름을 뽑고 있습니다.`}
             </TurnInfo>
-          )}
-          {isMyTurn && !showDrawModal && (
-            <DrawButton
-              onClick={() => setShowDrawModal(true)}
-              disabled={isDrawing}
-            >
-              {isDrawing ? '뽑는 중...' : '이름 뽑기'}
-            </DrawButton>
           )}
           {!isMyTurn &&
             myPlayer?.order === 0 &&
@@ -395,6 +381,9 @@ export function BingoGame({
         isGameStarted={gameState?.is_started ?? false}
         drawnNames={gameState?.drawn_names ?? []}
         playerOrder={myPlayer?.order ?? 0}
+        isMyTurn={isMyTurn ?? false}
+        isDrawing={isDrawing}
+        onSelectForDraw={(name) => void handleSelectDraw(name)}
       />
 
       {/* 뽑은 이름 목록 */}
@@ -416,27 +405,15 @@ export function BingoGame({
         </DrawnNamesSection>
       )}
 
-      <Ranking isGameStarted={gameState?.is_started} />
+      <Ranking isGameStarted={gameState?.is_started} userId={user.id} />
 
-      {/* 이름 뽑기 모달 */}
-      <DrawModal
-        isOpen={!!gameState?.is_started && showDrawModal}
-        drawnResult={drawnResult}
-        drawMode={drawMode}
-        isDrawing={isDrawing}
-        remainingNames={characterNames.filter(
-          (name) => !gameState?.drawn_names.includes(name),
-        )}
-        myBoardNames={new Set(myPlayer?.board || [])}
-        nameMap={nameMap}
-        onClose={() => {
-          setShowDrawModal(false);
-          setDrawnResult(null);
-          setDrawMode('select');
-        }}
-        onRandomDraw={() => void handleDrawName()}
-        onSelectDraw={(name) => void handleSelectDraw(name)}
-        onSetDrawMode={setDrawMode}
+      {/* 채팅 */}
+      <Chat
+        userId={user.id}
+        userName={user.name}
+        profileImage={user.profile_image}
+        myRank={myRank}
+        isGameStarted={gameState?.is_started}
       />
 
       {/* 게임 종료 모달 */}
@@ -460,6 +437,40 @@ export function BingoGame({
 
       {/* 혼자 남음 모달 */}
       <AloneModal isOpen={showAloneModal} />
+
+      {/* 관리자 게임 초기화 버튼 */}
+      {user.is_admin && !gameState?.is_started && (
+        <AdminResetButton onClick={() => setShowResetConfirm(true)}>
+          게임 초기화
+        </AdminResetButton>
+      )}
+
+      {/* 게임 초기화 확인 모달 */}
+      {showResetConfirm && (
+        <ModalOverlay>
+          <ConfirmDialog>
+            <ConfirmDialogTitle>게임 초기화</ConfirmDialogTitle>
+            <ConfirmDialogText>
+              모든 플레이어의 보드와 점수가 초기화됩니다. 계속하시겠습니까?
+            </ConfirmDialogText>
+            <ConfirmDialogButtons>
+              <ResetButton
+                onClick={() => void handleResetGame()}
+                disabled={isResetting}
+              >
+                {isResetting ? '초기화 중...' : '초기화'}
+              </ResetButton>
+              <RestartButton
+                onClick={() => setShowResetConfirm(false)}
+                disabled={isResetting}
+                style={{ backgroundColor: '#3F4147' }}
+              >
+                취소
+              </RestartButton>
+            </ConfirmDialogButtons>
+          </ConfirmDialog>
+        </ModalOverlay>
+      )}
     </Container>
   );
 }

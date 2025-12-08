@@ -105,6 +105,7 @@ export function DrawModal({
                   key={name}
                   isInMyBoard={myBoardNames.has(name)}
                   onClick={() => {
+                    if (isDrawing) return;
                     onSelectDraw(name);
                     setSearchTerm('');
                   }}

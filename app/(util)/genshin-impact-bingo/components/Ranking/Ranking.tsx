@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getProfileImagePath } from '../../lib/auth';
 import {
   getOnlinePlayersRanking,
@@ -10,6 +10,7 @@ import {
 } from '../../lib/game';
 import {
   Container,
+  ExpandButton,
   PlayerInfo,
   PlayerName,
   PlayerNameWrapper,
@@ -29,18 +30,23 @@ function getRankVariant(rank: number): 1 | 2 | 3 | undefined {
   return undefined;
 }
 
-// 공동 순위 계산
+// 공동 순위 계산 (25칸 완성자 우선)
 function calculateRanks(players: Player[]): Map<number, number> {
   const rankMap = new Map<number, number>();
   let currentRank = 1;
   let prevScore = -1;
+  let prevComplete = false;
 
   for (const [index, player] of players.entries()) {
-    if (player.score !== prevScore) {
+    const isComplete = player.board.length === 25 && player.score === 12;
+
+    // 점수가 다르거나 완성 상태가 다르면 순위 변경
+    if (player.score !== prevScore || isComplete !== prevComplete) {
       currentRank = index + 1;
     }
     rankMap.set(player.id, currentRank);
     prevScore = player.score;
+    prevComplete = isComplete;
   }
 
   return rankMap;
@@ -48,10 +54,12 @@ function calculateRanks(players: Player[]): Map<number, number> {
 
 interface RankingProps {
   isGameStarted?: boolean;
+  userId?: number;
 }
 
-export function Ranking({ isGameStarted }: RankingProps) {
+export function Ranking({ isGameStarted, userId }: RankingProps) {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -71,14 +79,44 @@ export function Ranking({ isGameStarted }: RankingProps) {
 
   const rankMap = calculateRanks(players);
 
+  // 표시할 플레이어 목록 계산 (3위까지 + 자기자신)
+  const displayPlayers = useMemo(() => {
+    if (isExpanded) return players;
+
+    const top3: Player[] = [];
+    const seenRanks = new Set<number>();
+
+    // 3위까지 추가 (공동 순위 포함)
+    for (const player of players) {
+      const rank = rankMap.get(player.id) ?? 0;
+      if (rank <= 3) {
+        top3.push(player);
+        seenRanks.add(player.id);
+      }
+    }
+
+    // 자기자신이 3위 밖이면 추가
+    if (userId) {
+      const myPlayer = players.find((p) => p.id === userId);
+      if (myPlayer && !seenRanks.has(userId)) {
+        top3.push(myPlayer);
+      }
+    }
+
+    return top3;
+  }, [players, rankMap, userId, isExpanded]);
+
+  const hasMorePlayers = players.length > displayPlayers.length;
+
   return (
     <Container>
       <Title>실시간 순위</Title>
       <RankList>
-        {players.slice(0, 10).map((player) => {
+        {displayPlayers.map((player) => {
           const rank = rankMap.get(player.id) ?? 0;
+          const isMe = player.id === userId;
           return (
-            <RankItem key={player.id} rank={getRankVariant(rank)}>
+            <RankItem key={player.id} rank={getRankVariant(rank)} isMe={isMe}>
               <RankNumber>{rank}</RankNumber>
               <PlayerInfo>
                 <ProfileImage>
@@ -91,7 +129,10 @@ export function Ranking({ isGameStarted }: RankingProps) {
                   />
                 </ProfileImage>
                 <PlayerNameWrapper>
-                  <PlayerName>{player.name}</PlayerName>
+                  <PlayerName>
+                    {player.name}
+                    {isMe && ' (나)'}
+                  </PlayerName>
                   {!isGameStarted && (
                     <ReadyBadge isReady={player.is_ready}>
                       {player.is_ready ? '준비완료' : '이름 채우는 중...'}
@@ -111,6 +152,13 @@ export function Ranking({ isGameStarted }: RankingProps) {
           </RankItem>
         )}
       </RankList>
+      {(hasMorePlayers || isExpanded) && players.length > 0 && (
+        <ExpandButton onClick={() => setIsExpanded(!isExpanded)}>
+          {isExpanded
+            ? '접기'
+            : `더보기 (${players.length - displayPlayers.length}명)`}
+        </ExpandButton>
+      )}
     </Container>
   );
 }

@@ -11,12 +11,19 @@ import {
   Board,
   Button,
   ButtonContainer,
+  CancelButton,
   Cell,
   CellImage,
   CellName,
   ClearButton,
+  ConfirmButton,
   Container,
+  DrawConfirmButtons,
+  DrawConfirmSection,
+  DrawConfirmText,
   MatchedCell,
+  SelectableCell,
+  SelectedForDrawCell,
 } from './BingoBoard.styles';
 
 interface BingoBoardProps {
@@ -25,8 +32,10 @@ interface BingoBoardProps {
   userId: number;
   isGameStarted: boolean;
   drawnNames: string[];
-  initialBoard?: string[];
   playerOrder?: number; // 플레이어의 게임 참여 순서 (0이면 미참여)
+  isMyTurn?: boolean; // 내 턴인지 여부
+  isDrawing?: boolean; // 뽑기 진행 중인지
+  onSelectForDraw?: (name: string) => void; // 뽑기용 선택 콜백
 }
 
 export function BingoBoard({
@@ -35,8 +44,10 @@ export function BingoBoard({
   userId,
   isGameStarted,
   drawnNames,
-  initialBoard,
   playerOrder = 0,
+  isMyTurn = false,
+  isDrawing = false,
+  onSelectForDraw,
 }: BingoBoardProps) {
   // 초기값은 빈 보드로 시작, DB에서 로드 후 업데이트
   const [board, setBoard] = useState<(string | null)[]>(
@@ -45,6 +56,7 @@ export function BingoBoard({
   const [selectedCell, setSelectedCell] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [selectedForDraw, setSelectedForDraw] = useState<string | null>(null);
 
   // 이전 userId를 추적하여 변경 시 재로드
   const prevUserIdRef = useRef<number | null>(null);
@@ -76,9 +88,6 @@ export function BingoBoard({
           if (idx < 25) newBoard[idx] = name;
         }
         setBoard(newBoard);
-      } else if (initialBoard?.length === 25) {
-        // DB에 저장된 보드가 없으면 initialBoard 사용
-        setBoard(initialBoard);
       }
       setIsLoaded(true);
     };
@@ -87,7 +96,7 @@ export function BingoBoard({
     return () => {
       isCancelled = true;
     };
-  }, [userId, isLoaded, initialBoard]);
+  }, [userId, isLoaded]);
 
   // 한글-영어 이름 매핑
   const nameMap = useMemo(
@@ -303,6 +312,60 @@ export function BingoBoard({
             );
           }
 
+          // 내 턴이고 아직 뽑히지 않은 셀 - 선택 가능
+          const canSelectForDraw =
+            isMyTurn && !isDrawing && name && !drawnNames.includes(name);
+
+          // 선택된 셀 (확인 대기 중)
+          if (canSelectForDraw && selectedForDraw === name) {
+            return (
+              <SelectedForDrawCell
+                key={index}
+                onClick={() => setSelectedForDraw(null)}
+              >
+                {name && (
+                  <>
+                    <CellImage>
+                      <Image
+                        src={getImagePath(name)}
+                        alt={name}
+                        width={48}
+                        height={48}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </CellImage>
+                    <CellName>{name}</CellName>
+                  </>
+                )}
+              </SelectedForDrawCell>
+            );
+          }
+
+          // 선택 가능한 셀
+          if (canSelectForDraw) {
+            return (
+              <SelectableCell
+                key={index}
+                onClick={() => setSelectedForDraw(name)}
+              >
+                {name && (
+                  <>
+                    <CellImage>
+                      <Image
+                        src={getImagePath(name)}
+                        alt={name}
+                        width={48}
+                        height={48}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </CellImage>
+                    <CellName>{name}</CellName>
+                  </>
+                )}
+              </SelectableCell>
+            );
+          }
+
           // 일반 셀
           return (
             <Cell
@@ -330,6 +393,31 @@ export function BingoBoard({
           );
         })}
       </Board>
+
+      {/* 뽑기 확인 섹션 */}
+      {isMyTurn && selectedForDraw && (
+        <DrawConfirmSection>
+          <DrawConfirmText>
+            <strong>{selectedForDraw}</strong>을(를) 뽑으시겠습니까?
+          </DrawConfirmText>
+          <DrawConfirmButtons>
+            <ConfirmButton
+              onClick={() => {
+                if (onSelectForDraw && !isDrawing) {
+                  onSelectForDraw(selectedForDraw);
+                  setSelectedForDraw(null);
+                }
+              }}
+              disabled={isDrawing}
+            >
+              {isDrawing ? '뽑는 중...' : '확인'}
+            </ConfirmButton>
+            <CancelButton onClick={() => setSelectedForDraw(null)}>
+              취소
+            </CancelButton>
+          </DrawConfirmButtons>
+        </DrawConfirmSection>
+      )}
 
       {canEditBoard && (
         <CharacterSelectModal

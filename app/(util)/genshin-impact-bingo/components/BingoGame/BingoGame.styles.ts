@@ -8,6 +8,14 @@ export const Container = styled('div', {
     width: '100%',
     maxWidth: '100vw',
     boxSizing: 'border-box',
+    // 모바일 가로모드
+    '@media (max-width: 896px) and (orientation: landscape)': {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      gap: '16px',
+    },
   },
 });
 
@@ -978,9 +986,118 @@ export const ResetButton = styled('button', {
     _hover: {
       backgroundColor: '#C73E3A',
     },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
     md: {
       padding: '14px 40px',
       fontSize: '18px',
+    },
+  },
+});
+
+export const RestartButton = styled('button', {
+  base: {
+    padding: '12px 32px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#3BA55C',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#2D8049',
+    },
+    _disabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
+    md: {
+      padding: '14px 40px',
+      fontSize: '18px',
+    },
+  },
+});
+
+export const AdminButtonGroup = styled('div', {
+  base: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '16px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+});
+
+// 확인 다이얼로그
+export const ConfirmDialog = styled('div', {
+  base: {
+    backgroundColor: '#2B2D31',
+    borderRadius: '16px',
+    padding: '24px',
+    maxWidth: '400px',
+    width: '90%',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+  },
+});
+
+export const ConfirmDialogTitle = styled('h3', {
+  base: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: 'white',
+    margin: 0,
+  },
+});
+
+export const ConfirmDialogText = styled('p', {
+  base: {
+    fontSize: '14px',
+    color: '#B5BAC1',
+    margin: 0,
+    lineHeight: 1.5,
+  },
+});
+
+export const ConfirmDialogButtons = styled('div', {
+  base: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '8px',
+  },
+});
+
+// 관리자 게임 초기화 버튼 (화면 하단 고정)
+export const AdminResetButton = styled('button', {
+  base: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#ED4245',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(237, 66, 69, 0.4)',
+    zIndex: 100,
+    _hover: {
+      backgroundColor: '#C73E3A',
+      transform: 'scale(1.05)',
+    },
+    md: {
+      padding: '14px 24px',
+      fontSize: '16px',
     },
   },
 });
