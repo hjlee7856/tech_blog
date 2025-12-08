@@ -86,6 +86,7 @@ interface ChatProps {
   userName?: string;
   profileImage?: string;
   myScore?: number; // 빙고 줄 수
+  myRank?: number; // 순위
   isGameStarted?: boolean;
 }
 
@@ -94,6 +95,7 @@ export function Chat({
   userName,
   profileImage,
   myScore,
+  myRank,
   isGameStarted,
 }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -102,10 +104,15 @@ export function Chat({
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
 
-  // 1빙고 이상일 때만 자랑 가능
+  // 3위권 + 1빙고 이상일 때만 자랑 가능
   const canBoast = useMemo(
-    () => isGameStarted && myScore !== undefined && myScore >= 1,
-    [isGameStarted, myScore],
+    () =>
+      isGameStarted &&
+      myScore !== undefined &&
+      myScore >= 1 &&
+      myRank !== undefined &&
+      myRank <= 3,
+    [isGameStarted, myScore, myRank],
   );
 
   useEffect(() => {

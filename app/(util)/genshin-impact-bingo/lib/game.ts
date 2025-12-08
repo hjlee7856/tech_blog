@@ -156,7 +156,12 @@ export async function resetGame(): Promise<boolean> {
     .update({ score: 0, board: [], is_ready: false, order: 0 })
     .gte('id', 0);
 
-  return !playerError;
+  if (playerError) return false;
+
+  // 채팅 메시지 초기화
+  await supabase.from('genshin-bingo-chat').delete().gte('id', 0);
+
+  return true;
 }
 
 export async function drawName(

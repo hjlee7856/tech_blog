@@ -241,6 +241,35 @@ export function BingoGame({
     return activePlayers[nextIdx];
   }, [gameState, players]);
 
+  // 내 순위 계산 (채팅 자랑용)
+  const myRank = useMemo(() => {
+    if (!user || !gameState?.is_started) return undefined;
+    const rankedPlayers = players
+      .filter((p) => p.is_online && p.order > 0)
+      .toSorted((a, b) => {
+        const aComplete = a.board.length === 25 && a.score === 12;
+        const bComplete = b.board.length === 25 && b.score === 12;
+        if (aComplete !== bComplete) return bComplete ? 1 : -1;
+        return b.score - a.score;
+      });
+    const myIndex = rankedPlayers.findIndex((p) => p.id === user.id);
+    if (myIndex === -1) return undefined;
+
+    // 공동 순위 계산
+    let rank = 1;
+    for (let i = 0; i < myIndex; i++) {
+      const prev = rankedPlayers[i];
+      const curr = rankedPlayers[i + 1];
+      if (!prev || !curr) continue;
+      const prevComplete = prev.board.length === 25 && prev.score === 12;
+      const currComplete = curr.board.length === 25 && curr.score === 12;
+      if (prev.score !== curr.score || prevComplete !== currComplete) {
+        rank = i + 2;
+      }
+    }
+    return rank;
+  }, [user, gameState?.is_started, players]);
+
   // 뽑은 이름 목록 자동 스크롤
   useEffect(() => {
     if (drawnNamesListRef.current) {
@@ -394,6 +423,7 @@ export function BingoGame({
         userName={user.name}
         profileImage={user.profile_image}
         myScore={myPlayer?.score}
+        myRank={myRank}
         isGameStarted={gameState?.is_started}
       />
 
