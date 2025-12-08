@@ -71,6 +71,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
         <MessageHeaderContainer>
           <MessageName>
             {msg.user_name}
+            {isMe && '(나)'}
             {msg.is_boast && msg.rank && <BoastBadge>{msg.rank}위</BoastBadge>}
           </MessageName>
           <MessageTime>{formattedTime}</MessageTime>

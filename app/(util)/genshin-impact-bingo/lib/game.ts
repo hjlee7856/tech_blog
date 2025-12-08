@@ -191,49 +191,35 @@ export async function drawName(
   return { success: true, name: drawnName };
 }
 
-// 턴 넘기기 진행 중 플래그 (중복 호출 방지)
-let isNextTurnInProgress = false;
-
 export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
-  // 이미 턴 넘기기가 진행 중이면 무시
-  if (isNextTurnInProgress) return false;
-  isNextTurnInProgress = true;
+  const gameState = await getGameState();
+  if (!gameState) return false;
 
-  try {
-    const gameState = await getGameState();
-    if (!gameState) return false;
+  // 온라인이고 게임에 참여 중인(order > 0) 플레이어들만 조회
+  const players = await getAllPlayers();
+  const onlineActivePlayers = players
+    .filter((p) => p.is_online && p.order > 0)
+    .toSorted((a, b) => a.order - b.order);
 
-    // 온라인이고 게임에 참여 중인(order > 0) 플레이어들만 조회
-    const players = await getAllPlayers();
-    const onlineActivePlayers = players
-      .filter((p) => p.is_online && p.order > 0)
-      .toSorted((a, b) => a.order - b.order);
+  if (onlineActivePlayers.length === 0) return false;
 
-    if (onlineActivePlayers.length === 0) return false;
+  // 현재 순서보다 큰 온라인 플레이어 찾기
+  const nextPlayer = onlineActivePlayers.find(
+    (p) => p.order > gameState.current_order,
+  );
 
-    // 현재 순서보다 큰 온라인 플레이어 찾기
-    const nextPlayer = onlineActivePlayers.find(
-      (p) => p.order > gameState.current_order,
-    );
+  // 없으면 첫 번째 온라인 플레이어로 돌아감
+  const nextOrder = nextPlayer?.order ?? onlineActivePlayers[0]?.order ?? 1;
 
-    // 없으면 첫 번째 온라인 플레이어로 돌아감
-    const nextOrder = nextPlayer?.order ?? onlineActivePlayers[0]?.order ?? 1;
+  // 이미 같은 순서면 업데이트 불필요
+  if (nextOrder === gameState.current_order) return true;
 
-    // 이미 같은 순서면 업데이트 불필요
-    if (nextOrder === gameState.current_order) return true;
+  const { error } = await supabase
+    .from('genshin-bingo-game-state')
+    .update({ current_order: nextOrder })
+    .eq('id', GAME_STATE_ID);
 
-    const { error } = await supabase
-      .from('genshin-bingo-game-state')
-      .update({ current_order: nextOrder })
-      .eq('id', GAME_STATE_ID);
-
-    return !error;
-  } finally {
-    // 약간의 딜레이 후 플래그 해제 (다른 클라이언트의 중복 호출 방지)
-    setTimeout(() => {
-      isNextTurnInProgress = false;
-    }, 1000);
-  }
+  return !error;
 }
 
 // 게임 중간 참여: 새로운 플레이어에게 순서 부여

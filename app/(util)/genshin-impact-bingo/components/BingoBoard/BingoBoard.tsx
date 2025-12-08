@@ -74,6 +74,7 @@ export function BingoBoard({
   const isApplyingLocalChangeRef = useRef(false);
   const isSyncingFromServerRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedBoardRef = useRef<string>('');
 
   // 이전 userId를 추적하여 변경 시 재로드
   const prevUserIdRef = useRef<number | null>(null);
@@ -81,7 +82,14 @@ export function BingoBoard({
   const applyBoardUpdate = useCallback(
     (updater: (prev: (string | null)[]) => (string | null)[]) => {
       isApplyingLocalChangeRef.current = true;
-      setBoard((prev) => updater([...prev]));
+      setBoard((prev) => {
+        const newBoard = updater([...prev]);
+        // 로컬 변경 플래그는 다음 틱에 리셋
+        setTimeout(() => {
+          isApplyingLocalChangeRef.current = false;
+        }, 0);
+        return newBoard;
+      });
     },
     [],
   );
@@ -140,7 +148,20 @@ export function BingoBoard({
   // 플레이어 보드 변경 구독 (게임 초기화 시 보드 리셋 감지)
   useEffect(() => {
     const subscription = subscribeToPlayerBoard(userId, (newBoard) => {
-      if (isApplyingLocalChangeRef.current) return;
+      // 로컬 변경 중이면 무시
+      if (isApplyingLocalChangeRef.current) {
+        return;
+      }
+
+      // 서버에서 온 보드를 문자열로 변환하여 비교
+      const newBoardStr = JSON.stringify(newBoard);
+      if (newBoardStr === lastSavedBoardRef.current) {
+        // 같은 보드면 무시 (자신이 저장한 것)
+        return;
+      }
+
+      // 서버 동기화 플래그 설정
+      isSyncingFromServerRef.current = true;
 
       // 실제 캐릭터가 있는지 확인 (빈 문자열 제외)
       const validNames = newBoard.filter(
@@ -157,7 +178,10 @@ export function BingoBoard({
 
       if (newBoard.length === 25) {
         // 빈 문자열을 null로 변환
-        setBoard(newBoard.map((name) => (name === '' ? null : name)));
+        const convertedBoard = newBoard.map((name) =>
+          name === '' ? null : name,
+        );
+        setBoard(convertedBoard);
         isSyncingFromServerRef.current = false;
         return;
       }
@@ -181,14 +205,10 @@ export function BingoBoard({
   useEffect(() => {
     if (!isLoaded) return;
 
+    // 서버 동기화 중이면 저장 스킵
     if (isSyncingFromServerRef.current) {
       isSyncingFromServerRef.current = false;
       return;
-    }
-
-    if (isApplyingLocalChangeRef.current) {
-      isApplyingLocalChangeRef.current = false;
-      // 플래그만 리셋하고 저장은 계속 진행
     }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -200,13 +220,17 @@ export function BingoBoard({
           (name) => name !== null && name !== '',
         ).length;
 
+        let boardToSave: string[];
         if (validCount === 0) {
-          await saveBoard(userId, []);
+          boardToSave = [];
         } else {
           // null을 빈 문자열로 변환하여 인덱스 유지
-          const boardToSave = board.map((name) => name ?? '');
-          await saveBoard(userId, boardToSave);
+          boardToSave = board.map((name) => name ?? '');
         }
+
+        // 저장 전에 현재 보드를 기록
+        lastSavedBoardRef.current = JSON.stringify(boardToSave);
+        await saveBoard(userId, boardToSave);
 
         if (validCount < 25) {
           await setReadyFalse(userId);
@@ -293,6 +317,7 @@ export function BingoBoard({
   const handleClearAll = useCallback(async () => {
     if (!canEditBoard) return;
     // 보드 초기화 시 빈 배열로 저장
+    lastSavedBoardRef.current = JSON.stringify([]);
     await saveBoard(userId, []);
     // 준비 상태 해제
     await setReadyFalse(userId);

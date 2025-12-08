@@ -36,8 +36,8 @@ export function useGameData({
   const [isLoading, setIsLoading] = useState(true);
 
   // 중복 호출 방지용 ref
-  const isResettingRef = useRef(false);
   const isSkippingTurnRef = useRef(false);
+  const skipTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 콜백을 ref로 저장하여 의존성 배열에서 제거 (재구독 방지)
   const onGameFinishRef = useRef(onGameFinish);
@@ -113,31 +113,40 @@ export function useGameData({
       void playersSubscription.unsubscribe();
     };
 
-    // 유효하지 않은 턴 스킵 함수
+    // 유효하지 않은 턴 스킵 함수 (debounce 적용)
     async function checkAndSkipInvalidTurn(playerList: Player[]) {
       if (isSkippingTurnRef.current) return;
 
-      const state = await getGameState();
-      if (!state?.is_started || state.is_finished) return;
-
-      const currentTurnPlayer = playerList.find(
-        (p) => p.order === state.current_order,
-      );
-
-      // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우에만 스킵
-      // 단, 현재 턴 플레이어가 존재하고 온라인이며 order > 0이면 스킵하지 않음
-      const shouldSkip =
-        !currentTurnPlayer ||
-        !currentTurnPlayer.is_online ||
-        currentTurnPlayer.order <= 0;
-
-      if (shouldSkip) {
-        isSkippingTurnRef.current = true;
-        await nextTurn();
-        setTimeout(() => {
-          isSkippingTurnRef.current = false;
-        }, 1000);
+      // 이전 타이머 취소
+      if (skipTurnTimeoutRef.current) {
+        clearTimeout(skipTurnTimeoutRef.current);
       }
+
+      // 300ms 후에 실행 (여러 클라이언트의 동시 호출 방지)
+      skipTurnTimeoutRef.current = setTimeout(async () => {
+        if (isSkippingTurnRef.current) return;
+
+        const state = await getGameState();
+        if (!state?.is_started || state.is_finished) return;
+
+        const currentTurnPlayer = playerList.find(
+          (p) => p.order === state.current_order,
+        );
+
+        // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우에만 스킵
+        const shouldSkip =
+          !currentTurnPlayer ||
+          !currentTurnPlayer.is_online ||
+          currentTurnPlayer.order <= 0;
+
+        if (shouldSkip) {
+          isSkippingTurnRef.current = true;
+          await nextTurn();
+          setTimeout(() => {
+            isSkippingTurnRef.current = false;
+          }, 500);
+        }
+      }, 300);
     }
   }, []); // 의존성 배열 비움 - 콜백은 ref로 관리
 

@@ -39,35 +39,48 @@ function playBeep(frequency: number, duration: number, volume = 0.3) {
 
 // 내 턴 알림음 (상승하는 톤)
 export function playMyTurnSound() {
-  // playBeep(523.25, 0.15, 0.2); // C5
-  // setTimeout(() => playBeep(659.25, 0.15, 0.2), 100); // E5
-  // setTimeout(() => playBeep(783.99, 0.2, 0.25), 200); // G5
+  playBeep(523.25, 0.15, 0.2); // C5
+  setTimeout(() => playBeep(659.25, 0.15, 0.2), 100); // E5
+  setTimeout(() => playBeep(783.99, 0.2, 0.25), 200); // G5
 }
 
 // 이름 선택 효과음 (클릭음)
 export function playSelectSound() {
-  // playBeep(880, 0.1, 0.15); // A5
+  playBeep(880, 0.1, 0.15); // A5
 }
 
 // 빙고 완성 효과음 (성공음)
 export function playBingoSound() {
-  // playBeep(523.25, 0.1, 0.2); // C5
-  // setTimeout(() => playBeep(659.25, 0.1, 0.2), 80); // E5
-  // setTimeout(() => playBeep(783.99, 0.1, 0.2), 160); // G5
-  // setTimeout(() => playBeep(1046.5, 0.3, 0.25), 240); // C6
+  playBeep(523.25, 0.1, 0.2); // C5
+  setTimeout(() => playBeep(659.25, 0.1, 0.2), 80); // E5
+  setTimeout(() => playBeep(783.99, 0.1, 0.2), 160); // G5
+  setTimeout(() => playBeep(1046.5, 0.3, 0.25), 240); // C6
 }
 
 // 게임 종료 효과음 (팡파레)
 export function playGameFinishSound() {
-  // playBeep(523.25, 0.15, 0.2); // C5
-  // setTimeout(() => playBeep(659.25, 0.15, 0.2), 100); // E5
-  // setTimeout(() => playBeep(783.99, 0.15, 0.2), 200); // G5
-  // setTimeout(() => playBeep(1046.5, 0.15, 0.25), 300); // C6
-  // setTimeout(() => playBeep(1318.51, 0.4, 0.3), 400); // E6
+  playBeep(523.25, 0.15, 0.2); // C5
+  setTimeout(() => playBeep(659.25, 0.15, 0.2), 100); // E5
+  setTimeout(() => playBeep(783.99, 0.15, 0.2), 200); // G5
+  setTimeout(() => playBeep(1046.5, 0.15, 0.25), 300); // C6
+  setTimeout(() => playBeep(1318.51, 0.4, 0.3), 400); // E6
 }
 
 // 경고음 (에러, 실패)
 export function playWarningSound() {
-  // playBeep(220, 0.2, 0.2); // A3
-  // setTimeout(() => playBeep(196, 0.3, 0.2), 150); // G3
+  playBeep(220, 0.2, 0.2); // A3
+  setTimeout(() => playBeep(196, 0.3, 0.2), 150); // G3
+}
+
+// 게임 시작 효과음 (시작 신호)
+export function playGameStartSound() {
+  playBeep(392, 0.1, 0.2); // G4
+  setTimeout(() => playBeep(523.25, 0.1, 0.2), 100); // C5
+  setTimeout(() => playBeep(659.25, 0.2, 0.25), 200); // E5
+}
+
+// 준비 완료 효과음 (확인음)
+export function playReadySound() {
+  playBeep(659.25, 0.1, 0.15); // E5
+  setTimeout(() => playBeep(783.99, 0.15, 0.2), 100); // G5
 }

@@ -74,9 +74,7 @@ export const MessageItem = styled('div', {
       },
     },
     isMe: {
-      true: {
-        backgroundColor: '#4752C4',
-      },
+      true: {},
     },
   },
 });
@@ -114,22 +112,22 @@ export const MessageHeaderContainer = styled('div', {
 
 export const MessageName = styled('span', {
   base: {
-    fontSize: '11px',
+    fontSize: '13px',
     fontWeight: 'bold',
     color: '#B5BAC1',
     md: {
-      fontSize: '12px',
+      fontSize: '13px',
     },
   },
 });
 
 export const MessageText = styled('span', {
   base: {
-    fontSize: '13px',
+    fontSize: '14px',
     color: 'white',
     wordBreak: 'break-word',
     md: {
-      fontSize: '14px',
+      fontSize: '15px',
     },
   },
 });
@@ -147,6 +145,8 @@ export const MessageTime = styled('span', {
 
 export const BoastBadge = styled('span', {
   base: {
+    display: 'inline-flex',
+    alignItems: 'center',
     marginLeft: '6px',
     padding: '2px 6px',
     fontSize: '10px',

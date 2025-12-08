@@ -58,7 +58,14 @@ import {
   UserName,
 } from './BingoGame.styles';
 
-import { playSelectSound } from '../../lib/sounds';
+import {
+  playBingoSound,
+  playGameFinishSound,
+  playGameStartSound,
+  playMyTurnSound,
+  playReadySound,
+  playSelectSound,
+} from '../../lib/sounds';
 import { Chat } from '../Chat';
 import { ReadyStatus } from '../ReadyStatus';
 import { useGameData, useOnlineStatus } from './hooks';
@@ -91,6 +98,7 @@ export function BingoGame({
   const handleGameFinish = useCallback((ranking: Player[]) => {
     setFinalRanking(ranking);
     setShowFinishModal(true);
+    playGameFinishSound();
   }, []);
 
   const handleAloneInGame = useCallback(() => {
@@ -114,7 +122,18 @@ export function BingoGame({
 
   // 2명 이상 준비 시 바로 시작
   const isStartingRef = useRef(false);
+  const prevGameStartedRef = useRef(false);
+  const startGameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
   useEffect(() => {
+    // 게임 시작 효과음
+    if (gameState?.is_started && !prevGameStartedRef.current) {
+      playGameStartSound();
+    }
+    prevGameStartedRef.current = gameState?.is_started ?? false;
+
     if (!gameState || gameState.is_started) return;
     if (isStartingRef.current) return;
 
@@ -125,12 +144,27 @@ export function BingoGame({
         p.board.filter((item) => item !== null && item !== '').length === 25,
     );
 
-    if (readyOnlinePlayers.length >= 2) {
-      isStartingRef.current = true;
-      void startGame().finally(() => {
-        isStartingRef.current = false;
-      });
+    // 이전 타이머 취소
+    if (startGameTimeoutRef.current) {
+      clearTimeout(startGameTimeoutRef.current);
     }
+
+    if (readyOnlinePlayers.length >= 2) {
+      // 500ms 후에 시작 (여러 클라이언트의 동시 호출 방지)
+      startGameTimeoutRef.current = setTimeout(() => {
+        if (isStartingRef.current || gameState.is_started) return;
+        isStartingRef.current = true;
+        void startGame().finally(() => {
+          isStartingRef.current = false;
+        });
+      }, 500);
+    }
+
+    return () => {
+      if (startGameTimeoutRef.current) {
+        clearTimeout(startGameTimeoutRef.current);
+      }
+    };
   }, [gameState, players]);
 
   const handleLogin = async (loggedInUser: User) => {
@@ -148,9 +182,15 @@ export function BingoGame({
 
   const handleToggleReady = async () => {
     if (!user) return;
+    const currentPlayer = players.find((p) => p.id === user.id);
     await toggleReady(user.id);
     const playerList = await getAllPlayers();
     setPlayers(playerList);
+
+    // 준비 완료 시 효과음
+    if (!currentPlayer?.is_ready) {
+      playReadySound();
+    }
   };
 
   const handleProfileChange = async (englishName: string) => {
@@ -234,11 +274,21 @@ export function BingoGame({
   // 내 턴이 되었을 때 효과음 재생
   const prevIsMyTurnRef = useRef(false);
   useEffect(() => {
-    // if (isMyTurn && !prevIsMyTurnRef.current) {
-    //   playMyTurnSound();
-    // }
+    if (isMyTurn && !prevIsMyTurnRef.current) {
+      playMyTurnSound();
+    }
     prevIsMyTurnRef.current = isMyTurn ?? false;
   }, [isMyTurn]);
+
+  // 빙고 완성 시 효과음 재생 (내 점수가 증가할 때)
+  const prevMyScoreRef = useRef(0);
+  useEffect(() => {
+    const currentScore = myPlayer?.score ?? 0;
+    if (currentScore > prevMyScoreRef.current && prevMyScoreRef.current > 0) {
+      playBingoSound();
+    }
+    prevMyScoreRef.current = currentScore;
+  }, [myPlayer?.score]);
 
   // 다음 턴 플레이어 계산
   const nextTurnPlayer = useMemo(() => {
@@ -345,11 +395,13 @@ export function BingoGame({
             </StatusText>
           </GameStatus>
           <BoardActions>
-            <BoardActionDangerButton
-              onClick={() => setShowBoardClearConfirm(true)}
-            >
-              보드 초기화
-            </BoardActionDangerButton>
+            {!myPlayer?.is_ready && (
+              <BoardActionDangerButton
+                onClick={() => setShowBoardClearConfirm(true)}
+              >
+                보드 초기화
+              </BoardActionDangerButton>
+            )}
             {!myPlayer?.is_ready && (
               <BoardActionButton onClick={() => boardActions?.fillRandom()}>
                 랜덤 채우기
@@ -414,11 +466,13 @@ export function BingoGame({
                 {`보드를 완성하면 게임에 참여할 수 있습니다 (${localBoard.filter((item) => item !== null && item !== '').length}/25)`}
               </TurnInfo>
               <BoardActions>
-                <BoardActionDangerButton
-                  onClick={() => setShowBoardClearConfirm(true)}
-                >
-                  보드 초기화
-                </BoardActionDangerButton>
+                {!myPlayer?.is_ready && (
+                  <BoardActionDangerButton
+                    onClick={() => setShowBoardClearConfirm(true)}
+                  >
+                    보드 초기화
+                  </BoardActionDangerButton>
+                )}
                 <BoardActionButton onClick={() => boardActions?.fillRandom()}>
                   랜덤 채우기
                 </BoardActionButton>
