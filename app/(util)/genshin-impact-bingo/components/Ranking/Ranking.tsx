@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getProfileImagePath } from '../../lib/auth';
 import {
   getOnlinePlayersRanking,
+  subscribeToGameState,
   subscribeToOnlinePlayersRanking,
   type Player,
 } from '../../lib/game';
