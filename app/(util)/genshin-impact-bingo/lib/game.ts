@@ -268,6 +268,29 @@ export async function getPlayerBoard(userId: number): Promise<string[]> {
   return (data.board || []) as string[];
 }
 
+// 플레이어 보드 변경 구독
+export function subscribeToPlayerBoard(
+  userId: number,
+  callback: (board: string[]) => void,
+) {
+  return supabase
+    .channel(`player-board-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'genshin-bingo-game-user',
+        filter: `id=eq.${userId}`,
+      },
+      (payload) => {
+        const newBoard = (payload.new as { board?: string[] }).board || [];
+        callback(newBoard);
+      },
+    )
+    .subscribe();
+}
+
 export async function getPlayersRanking(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')

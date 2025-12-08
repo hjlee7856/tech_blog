@@ -55,7 +55,7 @@ export const MessageList = styled('div', {
 export const MessageItem = styled('div', {
   base: {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: '8px',
     padding: '6px 8px',
     borderRadius: '6px',
@@ -144,6 +144,7 @@ export const BoastBadge = styled('span', {
 export const InputSection = styled('div', {
   base: {
     display: 'flex',
+    flexDirection: 'column',
     gap: '8px',
   },
 });
@@ -171,6 +172,15 @@ export const ChatInput = styled('input', {
   },
 });
 
+export const ButtonSection = styled('div', {
+  base: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: '8px',
+  },
+});
+
 export const SendButton = styled('button', {
   base: {
     padding: '10px 16px',
@@ -182,6 +192,7 @@ export const SendButton = styled('button', {
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'all 0.2s',
+
     _hover: {
       backgroundColor: '#4752C4',
     },

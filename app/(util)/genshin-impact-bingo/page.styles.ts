@@ -20,13 +20,13 @@ export const Title = styled('h1', {
     fontSize: '32px',
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: '24px',
-    marginTop: { mdDown: '48px' },
+    marginBottom: '12px',
+    marginTop: { mdDown: '32px' },
     // 모바일 가로모드
     '@media (max-width: 896px) and (orientation: landscape)': {
       fontSize: '24px',
       marginTop: '16px',
-      marginBottom: '16px',
+      marginBottom: '8px',
     },
   },
 });

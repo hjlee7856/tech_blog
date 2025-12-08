@@ -3,7 +3,12 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createNameMap } from '../../lib/characterUtils';
-import { getPlayerBoard, saveBoard, setReadyFalse } from '../../lib/game';
+import {
+  getPlayerBoard,
+  saveBoard,
+  setReadyFalse,
+  subscribeToPlayerBoard,
+} from '../../lib/game';
 import { CharacterSelectModal } from '../CharacterSelectModal/CharacterSelectModal';
 import {
   AllMatchedCell,
@@ -88,6 +93,9 @@ export function BingoBoard({
           if (idx < 25) newBoard[idx] = name;
         }
         setBoard(newBoard);
+      } else {
+        // DB에 보드가 없으면 로컬도 초기화
+        setBoard(Array.from<string | null>({ length: 25 }).fill(null));
       }
       setIsLoaded(true);
     };
@@ -97,6 +105,23 @@ export function BingoBoard({
       isCancelled = true;
     };
   }, [userId, isLoaded]);
+
+  // 플레이어 보드 변경 구독 (게임 초기화 시 보드 리셋 감지)
+  useEffect(() => {
+    const subscription = subscribeToPlayerBoard(userId, (newBoard) => {
+      if (newBoard.length === 0) {
+        // 보드가 초기화되면 로컬도 초기화
+        setBoard(Array.from<string | null>({ length: 25 }).fill(null));
+        setIsLoaded(false);
+      } else if (newBoard.length === 25) {
+        setBoard(newBoard);
+      }
+    });
+
+    return () => {
+      void subscription.unsubscribe();
+    };
+  }, [userId]);
 
   // 한글-영어 이름 매핑
   const nameMap = useMemo(

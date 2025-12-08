@@ -23,7 +23,6 @@ import {
   type Player,
 } from '../../lib/game';
 import { BingoBoard } from '../BingoBoard/BingoBoard';
-import { Chat } from '../Chat';
 import { LoginModal } from '../LoginModal';
 import { ProfileSelectModal } from '../ProfileSelectModal';
 import { Ranking } from '../Ranking';
@@ -56,6 +55,7 @@ import {
   UserName,
 } from './BingoGame.styles';
 
+import { Chat } from '../Chat';
 import { useGameData, useOnlineStatus } from './hooks';
 import { AloneModal, FinishModal } from './modals';
 
@@ -386,6 +386,18 @@ export function BingoGame({
         onSelectForDraw={(name) => void handleSelectDraw(name)}
       />
 
+      {/* 채팅 */}
+      <Chat
+        userId={user.id}
+        userName={user.name}
+        profileImage={user.profile_image}
+        myRank={myRank}
+        isGameStarted={gameState?.is_started}
+      />
+
+      {/* 실시간 순위 목록 */}
+      <Ranking isGameStarted={gameState?.is_started} userId={user.id} />
+
       {/* 뽑은 이름 목록 */}
       {gameState?.is_started && gameState.drawn_names.length > 0 && (
         <DrawnNamesSection>
@@ -404,17 +416,6 @@ export function BingoGame({
           </DrawnNamesList>
         </DrawnNamesSection>
       )}
-
-      <Ranking isGameStarted={gameState?.is_started} userId={user.id} />
-
-      {/* 채팅 */}
-      <Chat
-        userId={user.id}
-        userName={user.name}
-        profileImage={user.profile_image}
-        myRank={myRank}
-        isGameStarted={gameState?.is_started}
-      />
 
       {/* 게임 종료 모달 */}
       <FinishModal

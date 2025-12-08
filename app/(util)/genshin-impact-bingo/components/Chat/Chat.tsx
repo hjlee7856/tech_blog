@@ -11,6 +11,7 @@ import {
 import {
   BoastBadge,
   BoastButton,
+  ButtonSection,
   ChatInput,
   Container,
   EmptyMessage,
@@ -85,11 +86,7 @@ export function Chat({
 
     setIsSending(true);
     const boastMessage =
-      myRank === 1
-        ? '🏆 1등이다! Bingo!'
-        : myRank === 2
-          ? '🥈 2등! Bingo!'
-          : '🥉 3등! Bingo!';
+      myRank === 1 ? '🏆 Bingo!' : myRank === 2 ? '🥈 Bingo!' : '🥉 Bingo!';
 
     await sendChatMessage(
       userId,
@@ -154,20 +151,22 @@ export function Chat({
             onKeyDown={handleKeyDown}
             disabled={isSending}
           />
-          <SendButton
-            onClick={() => void handleSend()}
-            disabled={isSending || !inputValue.trim()}
-          >
-            전송
-          </SendButton>
-          {canBoast && (
-            <BoastButton
-              onClick={() => void handleBoast()}
-              disabled={isSending}
+          <ButtonSection>
+            {canBoast && (
+              <BoastButton
+                onClick={() => void handleBoast()}
+                disabled={isSending}
+              >
+                🎉 자랑하기
+              </BoastButton>
+            )}
+            <SendButton
+              onClick={() => void handleSend()}
+              disabled={isSending || !inputValue.trim()}
             >
-              🎉 {myRank}위 자랑
-            </BoastButton>
-          )}
+              전송
+            </SendButton>
+          </ButtonSection>
         </InputSection>
       )}
     </Container>
