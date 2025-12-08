@@ -67,10 +67,9 @@ export function TurnTimer({
         transition: 'all 0.3s ease',
       })}
     >
-      <span>⏱️</span>
+      <span>남은시간: </span>
       <span
         className={css({
-          fontFamily: '"Courier New", monospace',
           fontSize: '16px',
         })}
       >

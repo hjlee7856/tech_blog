@@ -203,16 +203,14 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
 
   if (activePlayers.length === 0) return false;
 
-  // 현재 순서보다 큰 플레이어 찾기
-  const nextPlayer = activePlayers.find(
-    (p) => p.order > gameState.current_order,
+  // 현재 플레이어의 인덱스 찾기
+  const currentIndex = activePlayers.findIndex(
+    (p) => p.order === gameState.current_order,
   );
 
-  // 없으면 첫 번째 플레이어로 돌아감
-  const nextOrder = nextPlayer?.order ?? activePlayers[0]?.order ?? 1;
-
-  // 이미 같은 순서면 업데이트 불필요
-  if (nextOrder === gameState.current_order) return true;
+  // 다음 플레이어 인덱스 계산 (순환)
+  const nextIndex = (currentIndex + 1) % activePlayers.length;
+  const nextOrder = activePlayers[nextIndex]?.order ?? 1;
 
   const { error } = await supabase
     .from('genshin-bingo-game-state')

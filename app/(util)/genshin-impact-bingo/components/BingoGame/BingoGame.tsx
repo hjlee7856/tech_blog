@@ -69,7 +69,6 @@ import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
 import { useGameData, useOnlineStatus } from './hooks';
 import { FinishModal } from './modals';
-import { TurnTimer } from './TurnTimer';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -243,10 +242,7 @@ export function BingoGame({
       await checkAndUpdateAllScores(newDrawnNames);
 
       // 다음 턴으로
-      const activePlayers = players.filter((p) => p.order > 0);
-      if (activePlayers.length > 0) {
-        await nextTurn(activePlayers.length);
-      }
+      await nextTurn();
     } else {
       alert('이름 뽑기에 실패했습니다.');
     }
@@ -264,11 +260,8 @@ export function BingoGame({
 
   // 관리자 턴 넘기기
   const handleSkipTurn = useCallback(async () => {
-    const activePlayers = players.filter((p) => p.order > 0);
-    if (activePlayers.length > 0) {
-      await nextTurn(activePlayers.length);
-    }
-  }, [players]);
+    await nextTurn();
+  }, []);
 
   const lastDrawnName = gameState?.drawn_names.at(-1);
   const myPlayer = players.find((p) => p.id === user?.id);
@@ -277,28 +270,6 @@ export function BingoGame({
     myPlayer &&
     myPlayer.order > 0 &&
     myPlayer.order === gameState.current_order;
-
-  // 턴 타임아웃 처리
-  const handleTurnTimeout = async () => {
-    if (!isMyTurn || isDrawing || !gameState) return;
-
-    // 내 보드에서 아직 뽑히지 않은 캐릭터 중 랜덤 선택
-    const myBoard = myPlayer?.board.filter((name) => name && name !== '') || [];
-    const availableNames = myBoard.filter(
-      (name) => !gameState.drawn_names.includes(name),
-    );
-
-    if (availableNames.length > 0) {
-      const randomName =
-        availableNames[Math.floor(Math.random() * availableNames.length)];
-      if (randomName) {
-        await handleSelectDraw(randomName);
-      }
-    } else {
-      // 내 보드에 남은 캐릭터가 없으면 턴 넘김
-      await handleSkipTurn();
-    }
-  };
   const currentTurnPlayer = players.find(
     (p) => p.order === gameState?.current_order,
   );
@@ -487,15 +458,6 @@ export function BingoGame({
               </>
             )}
           </TurnInfo>
-
-          {/* 턴 타이머 */}
-          {myPlayer?.order && myPlayer.order > 0 && (
-            <TurnTimer
-              turnStartedAt={gameState.turn_started_at}
-              isMyTurn={isMyTurn ?? false}
-              onTimeout={handleTurnTimeout}
-            />
-          )}
 
           {isMyTurn && (
             <TurnInfo isMyTurn>
