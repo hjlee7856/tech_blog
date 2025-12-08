@@ -297,15 +297,24 @@ export async function getPlayersRanking(): Promise<Player[]> {
   return (data || []) as Player[];
 }
 
-// 게임 참여 플레이어 순위 조회 (order > 0)
+// 게임 참여 플레이어 순위 조회
+// 게임 시작 전: 모든 플레이어 표시
+// 게임 시작 후/종료 후: order > 0인 플레이어만 표시
 // 25칸 완성자(12줄 빙고)가 최우선, 그 다음 score 기준
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
-  const { data, error } = await supabase
+  const gameState = await getGameState();
+
+  const query = supabase
     .from('genshin-bingo-game-user')
     .select(
       'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
-    )
-    .gt('order', 0);
+    );
+
+  // 게임 시작 후 또는 종료 후에는 order > 0인 플레이어만
+  const { data, error } =
+    gameState?.is_started || gameState?.is_finished
+      ? await query.gt('order', 0)
+      : await query;
 
   if (error) return [];
 
@@ -313,8 +322,8 @@ export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const players = (data || []) as Player[];
   return players.toSorted((a, b) => {
     // 실제 캐릭터 수 확인
-    const aValidBoard = a.board.filter((item) => item !== null && item !== '');
-    const bValidBoard = b.board.filter((item) => item !== null && item !== '');
+    const aValidBoard = a.board.filter((item) => item && item !== '');
+    const bValidBoard = b.board.filter((item) => item && item !== '');
 
     const aComplete = aValidBoard.length === 25 && a.score === 12;
     const bComplete = bValidBoard.length === 25 && b.score === 12;
@@ -482,13 +491,20 @@ export async function setReadyFalse(userId: number): Promise<boolean> {
   return !error;
 }
 
-// 온라인 상태 업데이트 (deprecated - 호환성 유지)
+// 온라인 상태 업데이트
 export async function updateOnlineStatus(
-  _userId: number,
-  _isOnline: boolean,
+  userId: number,
+  isOnline: boolean,
 ): Promise<boolean> {
-  // is_online 필드 사용 중단으로 인해 아무 동작 안함
-  return true;
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({
+      is_online: isOnline,
+      last_seen: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  return !error;
 }
 
 // 게임 종료 처리

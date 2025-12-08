@@ -71,12 +71,19 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
     };
     void init();
 
-    const subscription = subscribeToOnlinePlayersRanking((ranking) => {
+    const playerSubscription = subscribeToOnlinePlayersRanking((ranking) => {
+      setPlayers(ranking);
+    });
+
+    // 게임 상태 변경 시에도 순위 갱신 (게임 시작/종료 시 필터링 로직 변경)
+    const gameStateSubscription = subscribeToGameState(async () => {
+      const ranking = await getOnlinePlayersRanking();
       setPlayers(ranking);
     });
 
     return () => {
-      void subscription.unsubscribe();
+      void playerSubscription.unsubscribe();
+      void gameStateSubscription.unsubscribe();
     };
   }, []);
 
