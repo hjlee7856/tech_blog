@@ -26,14 +26,12 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
   useEffect(() => {
     const init = async () => {
       const allPlayers = await getAllPlayers();
-      const onlinePlayers = allPlayers.filter((p) => p.is_online);
-      setPlayers(onlinePlayers);
+      setPlayers(allPlayers);
     };
     void init();
 
     const subscription = subscribeToPlayers((allPlayers: Player[]) => {
-      const onlinePlayers = allPlayers.filter((p: Player) => p.is_online);
-      setPlayers(onlinePlayers);
+      setPlayers(allPlayers);
     });
 
     return () => {
@@ -79,7 +77,7 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
         {players.length === 0 && (
           <PlayerItem>
             <PlayerName style={{ textAlign: 'center', color: '#B5BAC1' }}>
-              온라인 참가자가 없습니다
+              참가자가 없습니다
             </PlayerName>
           </PlayerItem>
         )}

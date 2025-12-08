@@ -38,9 +38,10 @@ function calculateRanks(players: Player[]): Map<number, number> {
   let prevComplete = false;
 
   for (const [index, player] of players.entries()) {
-    const isComplete =
-      player.board.filter((item) => item !== null && item !== '').length ===
-        25 && player.score === 12;
+    const validCount = player.board.filter(
+      (item) => item && item !== '',
+    ).length;
+    const isComplete = validCount === 25 && player.score === 12;
 
     // 점수가 다르거나 완성 상태가 다르면 순위 변경
     if (player.score !== prevScore || isComplete !== prevComplete) {
@@ -218,7 +219,7 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
         {players.length === 0 && (
           <RankItem>
             <PlayerName style={{ textAlign: 'center', color: '#B5BAC1' }}>
-              온라인 참가자가 없습니다
+              게임 참가자가 없습니다
             </PlayerName>
           </RankItem>
         )}

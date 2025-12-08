@@ -1,9 +1,14 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getProfileImagePath } from '../../../lib/auth';
-import { resetGame, startGame, type Player } from '../../../lib/game';
+import {
+  resetGame,
+  startGame,
+  subscribeToGameState,
+  type Player,
+} from '../../../lib/game';
 import {
   ConfirmDialog,
   ConfirmDialogButtons,
@@ -35,12 +40,14 @@ function getRank(index: number, players: Player[]): number {
   const currentPlayer = players[index];
   if (!prevPlayer || !currentPlayer) return index + 1;
 
-  const prevComplete =
-    prevPlayer.board.filter((item) => item !== null && item !== '').length ===
-      25 && prevPlayer.score === 12;
-  const currentComplete =
-    currentPlayer.board.filter((item) => item !== null && item !== '')
-      .length === 25 && currentPlayer.score === 12;
+  const prevValidCount = prevPlayer.board.filter(
+    (item) => item && item !== '',
+  ).length;
+  const currValidCount = currentPlayer.board.filter(
+    (item) => item && item !== '',
+  ).length;
+  const prevComplete = prevValidCount === 25 && prevPlayer.score === 12;
+  const currentComplete = currValidCount === 25 && currentPlayer.score === 12;
 
   // 완성 상태와 점수가 같으면 동일 순위
   if (
@@ -63,6 +70,22 @@ export function FinishModal({
 }: FinishModalProps) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // 게임 재시작 감지 - 게임이 리셋되면 모달 자동 닫기
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const subscription = subscribeToGameState((state) => {
+      // 게임이 리셋되었거나 다시 시작되면 모달 닫기
+      if (!state.is_finished) {
+        onReset();
+      }
+    });
+
+    return () => {
+      void subscription.unsubscribe();
+    };
+  }, [isOpen, onReset]);
 
   if (!isOpen) return null;
 

@@ -133,11 +133,8 @@ export function useGameData({
           (p) => p.order === state.current_order,
         );
 
-        // 현재 턴 플레이어가 없거나, 오프라인이거나, 게임 미참여(order=0)인 경우에만 스킵
-        const shouldSkip =
-          !currentTurnPlayer ||
-          !currentTurnPlayer.is_online ||
-          currentTurnPlayer.order <= 0;
+        // 현재 턴 플레이어가 없거나, 게임 미참여(order=0)인 경우에만 스킵
+        const shouldSkip = !currentTurnPlayer || currentTurnPlayer.order <= 0;
 
         if (shouldSkip) {
           isSkippingTurnRef.current = true;
