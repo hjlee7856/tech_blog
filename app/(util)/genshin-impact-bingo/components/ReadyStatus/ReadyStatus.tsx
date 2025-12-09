@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { getProfileImagePath } from '../../lib/auth';
 import { getAllPlayers, subscribeToPlayers, type Player } from '../../lib/game';
+import { usePresenceOnlineUsers } from '../BingoGame/hooks';
 import {
   Container,
   PlayerInfo,
@@ -22,6 +23,7 @@ interface ReadyStatusProps {
 
 export function ReadyStatus({ userId }: ReadyStatusProps) {
   const [players, setPlayers] = useState<Player[]>([]);
+  const { onlineUserIds } = usePresenceOnlineUsers();
 
   useEffect(() => {
     const init = async () => {
@@ -45,7 +47,10 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
 
   return (
     <Container>
-      <Title>참가자 준비 상태</Title>
+      <Title>
+        참가자 준비 상태
+        {onlineUserIds.length > 0 && ` (온라인 ${onlineUserIds.length}명)`}
+      </Title>
       <PlayerList>
         {players.map((player) => {
           const isMe = player.id === userId;

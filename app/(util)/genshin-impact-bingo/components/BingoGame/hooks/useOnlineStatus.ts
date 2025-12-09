@@ -1,61 +1,40 @@
-import { useEffect } from 'react';
-import {
-  checkAndUpdateOfflineUsers,
-  checkStartRequestTimeout,
-  heartbeat,
-  updateOnlineStatus,
-  validateStartRequest,
-} from '../../../lib/game';
+import { supabase } from '@/lib/supabaseClient';
+import { useEffect, useRef } from 'react';
+import { updateOnlineStatus } from '../../../lib/game';
 
 export function useOnlineStatus(userId: number | undefined) {
-  // 주기적 하트비트 및 오프라인 유저 체크
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     if (!userId) return;
 
-    const heartbeatInterval = setInterval(() => {
-      void heartbeat(userId);
-    }, 10_000);
+    const channel = supabase.channel('genshin-bingo-presence', {
+      config: {
+        presence: {
+          key: String(userId),
+        },
+      },
+    });
 
-    const offlineCheckInterval = setInterval(() => {
-      void checkAndUpdateOfflineUsers();
-    }, 15_000);
+    channelRef.current = channel;
 
-    const startRequestCheckInterval = setInterval(() => {
-      void checkStartRequestTimeout();
-      void validateStartRequest();
-    }, 5000);
+    channel.on('presence', { event: 'sync' }, () => {
+      // 필요하면 여기서 presenceState를 읽어 클라이언트 측 online 리스트를 계산할 수 있음
+      // const state = channel.presenceState();
+    });
 
-    void heartbeat(userId);
+    channel.subscribe((status) => {
+      if (status !== 'SUBSCRIBED') return;
+      void channel.track({ user_id: userId });
+      void updateOnlineStatus(userId, true);
+    });
 
     return () => {
-      clearInterval(heartbeatInterval);
-      clearInterval(offlineCheckInterval);
-      clearInterval(startRequestCheckInterval);
-    };
-  }, [userId]);
-
-  // 창 포커스/이탈 감지
-  useEffect(() => {
-    if (!userId) return;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        void updateOnlineStatus(userId, false);
-      } else if (document.visibilityState === 'visible') {
-        void updateOnlineStatus(userId, true);
-      }
-    };
-
-    const handleBeforeUnload = () => {
+      if (!channelRef.current) return;
+      void channelRef.current.untrack();
+      void channelRef.current.unsubscribe();
       void updateOnlineStatus(userId, false);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      channelRef.current = null;
     };
   }, [userId]);
 }

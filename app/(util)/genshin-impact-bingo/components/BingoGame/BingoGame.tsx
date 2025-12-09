@@ -65,11 +65,11 @@ import {
   playSelectSound,
 } from '../../lib/sounds';
 import { Chat } from '../Chat';
+import { NicknameChangeModal } from '../NicknameChangeModal';
 import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
-import { useGameData, useOnlineStatus } from './hooks';
+import { useGameData, useOnlineStatus, useStartRequestWatcher } from './hooks';
 import { FinishModal } from './modals';
-import { NicknameChangeModal } from '../NicknameChangeModal';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -118,8 +118,11 @@ export function BingoGame({
   const { user, setUser, gameState, players, setPlayers, isLoading } =
     useGameData(gameDataCallbacks);
 
-  // 온라인 상태 관리 훅
+  // 온라인 상태 관리 훅 (Presence 기반)
   useOnlineStatus(user?.id);
+
+  // 게임 시작 요청 타임아웃/유효성 체크 훅
+  useStartRequestWatcher();
 
   // 2명 이상 준비 시 바로 시작
   const isStartingRef = useRef(false);

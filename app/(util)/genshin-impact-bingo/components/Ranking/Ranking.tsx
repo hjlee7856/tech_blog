@@ -9,6 +9,7 @@ import {
   subscribeToOnlinePlayersRanking,
   type Player,
 } from '../../lib/game';
+import { usePresenceOnlineUsers } from '../BingoGame/hooks';
 import {
   Container,
   ExpandButton,
@@ -64,6 +65,7 @@ interface RankingProps {
 export function Ranking({ isGameStarted, userId }: RankingProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const { onlineUserIds } = usePresenceOnlineUsers();
 
   useEffect(() => {
     const init = async () => {
@@ -142,7 +144,10 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
 
   return (
     <Container>
-      <Title>실시간 순위</Title>
+      <Title>
+        실시간 순위
+        {onlineUserIds.length > 0 && ` (온라인 ${onlineUserIds.length}명)`}
+      </Title>
       <RankList>
         {displayGroups.map(([rank, groupPlayers]) => {
           // 공동 순위인 경우 (2명 이상)
