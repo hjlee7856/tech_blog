@@ -105,10 +105,15 @@ export async function startGame(forceStart = false): Promise<{
   }
 
   // 보드 미완성 플레이어는 순서 0으로
-  const notReadyPlayers = players.filter((p) => p.board.length !== 25);
+  const notReadyPlayers = players.filter(
+    (p) => p.board.filter((item) => item && item !== '').length !== 25,
+  );
   for (const player of notReadyPlayers) {
     await updatePlayerOrder(player.id, 0);
   }
+
+  // 첫 번째 턴은 가장 작은 order를 가진 플레이어
+  const firstOrder = Math.min(...shuffledIndices);
 
   const { error: stateError } = await supabase
     .from('genshin-bingo-game-state')
@@ -117,7 +122,7 @@ export async function startGame(forceStart = false): Promise<{
       is_started: true,
       is_finished: false,
       winner_id: null,
-      current_order: 1,
+      current_order: firstOrder,
       drawn_names: [],
       start_requested_by: null,
       start_agreed_users: [],
@@ -740,15 +745,44 @@ export async function cancelStartRequest(): Promise<boolean> {
   return !error;
 }
 
-// 하트비트 (deprecated - 호환성 유지)
-export async function heartbeat(_userId: number): Promise<boolean> {
-  // is_online 필드 사용 중단으로 인해 아무 동작 안함
-  return true;
+// 하트비트 - 온라인 상태 유지
+export async function heartbeat(userId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('genshin-bingo-game-user')
+    .update({
+      is_online: true,
+      last_seen: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  return !error;
 }
 
-// 오래된 오프라인 유저 체크 (deprecated - 호환성 유지)
+// 오래된 오프라인 유저 체크 - 5분 이상 하트비트 없으면 오프라인 처리
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5분
+
 export async function checkAndUpdateOfflineUsers(): Promise<void> {
-  // is_online 필드 사용 중단으로 인해 아무 동작 안함
+  const { data: players } = await supabase
+    .from('genshin-bingo-game-user')
+    .select('id, last_seen, is_online')
+    .eq('is_online', true);
+
+  if (!players) return;
+
+  const now = new Date();
+  for (const player of players) {
+    if (!player.last_seen) continue;
+
+    const lastSeen = new Date(player.last_seen);
+    const diff = now.getTime() - lastSeen.getTime();
+
+    if (diff > OFFLINE_THRESHOLD_MS) {
+      await supabase
+        .from('genshin-bingo-game-user')
+        .update({ is_online: false })
+        .eq('id', player.id);
+    }
+  }
 }
 
 // 시작 요청 타임아웃 체크 및 자동 취소

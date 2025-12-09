@@ -160,6 +160,57 @@ export async function updateProfileImage(
   return !error;
 }
 
+export async function updateNickname(
+  userId: number,
+  newName: string,
+  currentPassword: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 비밀번호 확인
+    const hashedPassword = await hashPassword(currentPassword);
+    const { data: user } = await supabase
+      .from('genshin-bingo-game-user')
+      .select('password, name')
+      .eq('id', userId)
+      .single();
+
+    if (!user || user.password !== hashedPassword) {
+      return { success: false, error: '비밀번호가 일치하지 않습니다.' };
+    }
+
+    // 중복 닉네임 확인
+    const { data: existing } = await supabase
+      .from('genshin-bingo-game-user')
+      .select('id')
+      .eq('name', newName)
+      .single();
+
+    if (existing && existing.id !== userId) {
+      return { success: false, error: '이미 존재하는 닉네임입니다.' };
+    }
+
+    // 닉네임 업데이트
+    const { error } = await supabase
+      .from('genshin-bingo-game-user')
+      .update({ name: newName })
+      .eq('id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // 로컬 스토리지 업데이트
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ name: newName, hashedPassword }),
+    );
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 function saveToStorage(user: User, hashedPassword: string): void {
   localStorage.setItem(
     STORAGE_KEY,

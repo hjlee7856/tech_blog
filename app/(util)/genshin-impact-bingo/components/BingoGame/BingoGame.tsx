@@ -69,6 +69,7 @@ import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
 import { useGameData, useOnlineStatus } from './hooks';
 import { FinishModal } from './modals';
+import { NicknameChangeModal } from '../NicknameChangeModal';
 
 interface BingoGameProps {
   characterNames: string[];
@@ -83,6 +84,7 @@ export function BingoGame({
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBoardClearConfirm, setShowBoardClearConfirm] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -274,6 +276,30 @@ export function BingoGame({
     (p) => p.order === gameState?.current_order,
   );
 
+  // 디버깅: 턴 상태 로그
+  useEffect(() => {
+    if (gameState?.is_started) {
+      console.log('[턴 디버깅]', {
+        current_order: gameState.current_order,
+        myOrder: myPlayer?.order,
+        isMyTurn,
+        myName: myPlayer?.name,
+        currentTurnPlayerName: currentTurnPlayer?.name,
+        activePlayers: players
+          .filter((p) => p.order > 0)
+          .map((p) => ({ name: p.name, order: p.order })),
+      });
+    }
+  }, [
+    gameState?.current_order,
+    myPlayer?.order,
+    isMyTurn,
+    players,
+    gameState?.is_started,
+    myPlayer?.name,
+    currentTurnPlayer?.name,
+  ]);
+
   // 내 턴이 되었을 때 효과음 재생
   const prevIsMyTurnRef = useRef(false);
   useEffect(() => {
@@ -391,7 +417,13 @@ export function BingoGame({
               style={{ borderRadius: '50%', objectFit: 'cover' }}
             />
           </ProfileImage>
-          <UserName>{user.name}</UserName>
+          <UserName
+            onClick={() => setShowNicknameModal(true)}
+            style={{ cursor: 'pointer' }}
+            title="클릭하여 닉네임 변경"
+          >
+            {user.name}
+          </UserName>
           <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
         </UserInfo>
       </Header>
@@ -567,6 +599,17 @@ export function BingoGame({
         characterEnNames={characterEnNames}
         currentProfile={user.profile_image || 'Aino'}
         onSelect={handleProfileChange}
+      />
+
+      {/* 닉네임 변경 모달 */}
+      <NicknameChangeModal
+        isOpen={showNicknameModal}
+        userId={user.id}
+        currentName={user.name}
+        onClose={() => setShowNicknameModal(false)}
+        onSuccess={(newName) => {
+          setUser({ ...user, name: newName });
+        }}
       />
 
       {/* 관리자 메뉴 (좌측 상단 고정) */}
