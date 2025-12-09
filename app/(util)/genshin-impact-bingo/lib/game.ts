@@ -311,31 +311,35 @@ export async function getPlayersRanking(): Promise<Player[]> {
 }
 
 // 게임 참여 플레이어 순위 조회
-// 게임 시작 전: 온라인 플레이어만 표시
+// 게임 시작 전: 온라인 플레이어만 표시 (is_online이 null이면 온라인으로 간주)
 // 게임 시작 후/종료 후: order > 0인 온라인 플레이어만 표시
 // 25칸 완성자(12줄 빙고)가 최우선, 그 다음 score 기준
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const gameState = await getGameState();
 
-  let query = supabase
+  const query = supabase
     .from('genshin-bingo-game-user')
     .select(
       'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
-    )
-    .eq('is_online', true); // 온라인 플레이어만
-
-  // 게임 시작 후 또는 종료 후에는 order > 0인 플레이어만
-  if (gameState?.is_started || gameState?.is_finished) {
-    query = query.gt('order', 0);
-  }
+    );
 
   const { data, error } = await query;
 
   if (error) return [];
 
+  // 클라이언트 측에서 필터링
+  let filteredPlayers = (data || []) as Player[];
+
+  // is_online 필터링 (null이면 온라인으로 간주)
+  filteredPlayers = filteredPlayers.filter((p) => p.is_online !== false);
+
+  // 게임 시작 후 또는 종료 후에는 order > 0인 플레이어만
+  if (gameState?.is_started || gameState?.is_finished) {
+    filteredPlayers = filteredPlayers.filter((p) => p.order > 0);
+  }
+
   // 25칸 완성자를 최우선으로 정렬
-  const players = (data || []) as Player[];
-  return players.toSorted((a, b) => {
+  return filteredPlayers.toSorted((a, b) => {
     // 실제 캐릭터 수 확인
     const aValidBoard = a.board.filter((item) => item && item !== '');
     const bValidBoard = b.board.filter((item) => item && item !== '');
