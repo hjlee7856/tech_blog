@@ -605,8 +605,9 @@ export async function checkGameFinish(
 }
 
 export function subscribeToGameState(callback: (state: GameState) => void) {
+  const channelName = `game-state-${Math.random().toString(36).slice(7)}`;
   return supabase
-    .channel('game-state-changes')
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'genshin-bingo-game-state' },
@@ -618,8 +619,9 @@ export function subscribeToGameState(callback: (state: GameState) => void) {
 }
 
 export function subscribeToPlayers(callback: (players: Player[]) => void) {
+  const channelName = `players-${Math.random().toString(36).slice(7)}`;
   return supabase
-    .channel('players-changes')
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'genshin-bingo-game-user' },
@@ -634,8 +636,9 @@ export function subscribeToPlayers(callback: (players: Player[]) => void) {
 export function subscribeToPlayersRanking(
   callback: (players: Player[]) => void,
 ) {
+  const channelName = `players-ranking-${Math.random().toString(36).slice(7)}`;
   return supabase
-    .channel('players-ranking-changes')
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'genshin-bingo-game-user' },
@@ -650,8 +653,9 @@ export function subscribeToPlayersRanking(
 export function subscribeToOnlinePlayersRanking(
   callback: (players: Player[]) => void,
 ) {
+  const channelName = `online-ranking-${Math.random().toString(36).slice(7)}`;
   return supabase
-    .channel('online-players-ranking-changes')
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'genshin-bingo-game-user' },
@@ -976,8 +980,9 @@ export function subscribeToChatMessages(
   // 초기 로드
   void getChatMessages().then(onInitialLoad);
 
+  const channelName = `chat-${Math.random().toString(36).slice(7)}`;
   return supabase
-    .channel('chat-messages')
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'genshin-bingo-chat' },
