@@ -13,13 +13,13 @@ import {
   checkAndUpdateAllScores,
   checkGameFinish,
   getAllPlayers,
+  getGameState,
   getOnlinePlayersRanking,
   joinGameInProgress,
   nextTurn,
   resetGame,
   startGame,
   toggleReady,
-  updateOnlineStatus,
   type Player,
 } from '../../lib/game';
 import { BingoBoard, type BingoBoardActions } from '../BingoBoard/BingoBoard';
@@ -176,13 +176,33 @@ export function BingoGame({
 
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
-    await updateOnlineStatus(loggedInUser.id, true);
+
+    const [currentGameState, playerList] = await Promise.all([
+      getGameState(),
+      getAllPlayers(),
+    ]);
+
+    if (!currentGameState) return;
+    if (!currentGameState.is_started) return;
+    if (currentGameState.is_finished) return;
+
+    const me = playerList.find((p: Player) => p.id === loggedInUser.id);
+    if (!me) return;
+
+    const filledCount = me.board.filter(
+      (item: string | null) => item && item !== '',
+    ).length;
+    if (filledCount !== 25) return;
+    if (me.order > 0) return;
+
+    const success = await joinGameInProgress(loggedInUser.id);
+    if (!success) return;
+
+    const updatedPlayers = await getAllPlayers();
+    setPlayers(updatedPlayers);
   };
 
   const handleLogout = async () => {
-    if (user) {
-      await updateOnlineStatus(user.id, false);
-    }
     logout();
     setUser(null);
   };
@@ -230,14 +250,17 @@ export function BingoGame({
     // 선택한 이름을 drawn_names에 추가
     const newDrawnNames = [...gameState.drawn_names, selectedName];
 
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('genshin-bingo-game-state')
       .update({
         drawn_names: newDrawnNames,
       })
-      .eq('id', 1);
+      .eq('id', 1)
+      .eq('drawn_names', gameState.drawn_names)
+      .select('id')
+      .single();
 
-    if (!error) {
+    if (!error && data) {
       // 게임 종료 체크
       const finishResult = await checkGameFinish(newDrawnNames);
       if (finishResult.finished) {
@@ -250,10 +273,15 @@ export function BingoGame({
 
       await checkAndUpdateAllScores(newDrawnNames);
 
-      // 다음 턴으로
-      await nextTurn();
+      // 다음 턴으로 (현재 턴 스냅샷을 함께 전달하여 중복 호출 방지)
+      if (typeof gameState.current_order === 'number') {
+        await nextTurn(gameState.current_order);
+      }
     } else {
-      alert('이름 뽑기에 실패했습니다.');
+      // 다른 플레이어가 먼저 이름을 뽑았거나, 상태가 변경된 경우 등을 포함해 실패 처리
+      alert(
+        '이름 뽑기에 실패했습니다.\n다른 플레이어가 먼저 이름을 뽑았을 수 있습니다.',
+      );
     }
 
     setIsDrawing(false);
@@ -269,8 +297,9 @@ export function BingoGame({
 
   // 관리자 턴 넘기기
   const handleSkipTurn = useCallback(async () => {
-    await nextTurn();
-  }, []);
+    if (!gameState) return;
+    await nextTurn(gameState.current_order);
+  }, [gameState]);
 
   const lastDrawnName = gameState?.drawn_names.at(-1);
   const myPlayer = players.find((p) => p.id === user?.id);

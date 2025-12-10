@@ -190,19 +190,37 @@ export async function drawName(
 
   const newDrawnNames = [...drawnNames, drawnName];
 
-  const { error } = await supabase
+  const { error, data } = await supabase
     .from('genshin-bingo-game-state')
     .update({ drawn_names: newDrawnNames })
-    .eq('id', GAME_STATE_ID);
+    .eq('id', GAME_STATE_ID)
+    .eq('drawn_names', drawnNames)
+    .select('id')
+    .single();
 
-  if (error) return { success: false, error: error.message };
+  if (error || !data)
+    return {
+      success: false,
+      error:
+        error?.message ??
+        '다른 플레이어가 먼저 이름을 뽑았거나 게임 상태가 변경되었습니다.',
+    };
 
   return { success: true, name: drawnName };
 }
 
-export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
+export async function nextTurn(
+  expectedCurrentOrder?: number,
+): Promise<boolean> {
   const gameState = await getGameState();
   if (!gameState) return false;
+
+  if (
+    typeof expectedCurrentOrder === 'number' &&
+    gameState.current_order !== expectedCurrentOrder
+  ) {
+    return false;
+  }
 
   const [players, onlineUserIds] = await Promise.all([
     getAllPlayers(),
@@ -301,7 +319,7 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
 
   // 현재 턴에 해당하는 플레이어가 아예 없으면 비정상 상태로 보고 턴을 넘김
   if (!currentPlayer) {
-    const moved = await nextTurn();
+    const moved = await nextTurn(gameState.current_order);
     return { advanced: moved, reason: 'missing_current_player' };
   }
 
@@ -352,13 +370,19 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
 export async function joinGameInProgress(userId: number): Promise<boolean> {
   // 현재 게임에 참여 중인 플레이어들의 최대 순서 조회
   const players = await getAllPlayers();
-  const maxOrder = Math.max(...players.map((p) => p.order), 0);
 
-  // 새 플레이어에게 다음 순서 부여
+  const me = players.find((p) => p.id === userId);
+  if (me && me.order > 0) return true;
+
+  const activeOrders = players.map((p) => p.order).filter((order) => order > 0);
+  const maxOrder = activeOrders.length ? Math.max(...activeOrders) : 0;
+
+  // 새 플레이어에게 다음 순서 부여 (여전히 order=0인 경우에만)
   const { error } = await supabase
     .from('genshin-bingo-game-user')
     .update({ order: maxOrder + 1 })
-    .eq('id', userId);
+    .eq('id', userId)
+    .eq('order', 0);
 
   return !error;
 }
@@ -649,7 +673,7 @@ export async function updateOnlineStatus(
         await updatePlayerOrder(userId, 0);
 
         // 현재 턴 플레이어였다면 다음 턴으로 넘김
-        if (wasCurrentTurn) await nextTurn();
+        if (wasCurrentTurn) await nextTurn(gameState.current_order);
       }
     }
   }
