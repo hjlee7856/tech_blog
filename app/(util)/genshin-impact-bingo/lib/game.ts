@@ -274,10 +274,25 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
 
   if (gameState.is_finished) return { advanced: false, reason: 'finished' };
 
-  const [players, onlineUserIds] = await Promise.all([
+  const [players, snapshotResult] = await Promise.all([
     getAllPlayers(),
-    getOnlineUserIds(),
+    supabase
+      .from('genshin-bingo-online-snapshot')
+      .select('online_user_ids, snapshot_at')
+      .order('snapshot_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  const snapshotRow = snapshotResult.data as {
+    online_user_ids: number[] | null;
+    snapshot_at: string | null;
+  } | null;
+  const onlineUserIds = Array.isArray(snapshotRow?.online_user_ids)
+    ? snapshotRow!.online_user_ids.filter(
+        (id): id is number => typeof id === 'number',
+      )
+    : [];
 
   const activePlayers = players.filter((p) => p.order > 0);
   if (activePlayers.length === 0)
@@ -306,12 +321,8 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   if (elapsed < OFFLINE_GRACE_MS)
     return { advanced: false, reason: 'grace_period' };
 
-  // 유예 시간이 지난 뒤에만, presence 스냅샷을 신뢰해서 오프라인 판정
-  // 스냅샷이 비어 있으면 현재 턴을 유지 (오프라인으로 간주하지 않음)
-  const hasSnapshot = onlineUserIds.length > 0;
-  const isCurrentOnline = hasSnapshot
-    ? onlineUserIds.includes(currentPlayer.id)
-    : true;
+  // 유예 시간이 지난 뒤에는, 최신 스냅샷 기준으로 오프라인 판정
+  const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
 
   if (isCurrentOnline) {
     console.log('[validateAndAutoAdvanceTurn] turn_valid', {
