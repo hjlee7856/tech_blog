@@ -214,15 +214,6 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
     .filter((p) => p.order > 0 && onlineUserIds.includes(p.id))
     .toSorted((a, b) => a.order - b.order);
 
-  if (activePlayers.length === 0) {
-    // 온라인 플레이어가 없으면 게임 종료
-    await supabase
-      .from('genshin-bingo-game-state')
-      .update({ is_finished: true })
-      .eq('id', GAME_STATE_ID);
-    return false;
-  }
-
   // 현재 플레이어의 인덱스 찾기
   const currentIndex = activePlayers.findIndex(
     (p) => p.order === gameState.current_order,
