@@ -23,6 +23,8 @@ const START_REQUEST_TIMEOUT_MS = 60_000;
 
 // 턴 제한시간 (60초)
 export const TURN_TIMEOUT_MS = 60_000;
+// 오프라인으로 간주하기 전 유예 시간 (10초)
+const OFFLINE_GRACE_MS = 10_000;
 
 export interface Player extends User {
   board: string[];
@@ -271,22 +273,37 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
 
   const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
 
+  let elapsed = 0;
   let isTimeout = false;
   if (gameState.turn_started_at) {
     const startedAt = new Date(gameState.turn_started_at);
     const now = new Date();
     const diff = now.getTime() - startedAt.getTime();
 
-    if (!Number.isNaN(diff) && diff > TURN_TIMEOUT_MS) isTimeout = true;
+    if (!Number.isNaN(diff)) {
+      elapsed = diff;
+      if (diff > TURN_TIMEOUT_MS) isTimeout = true;
+    }
   }
 
-  if (isCurrentOnline && !isTimeout)
-    return { advanced: false, reason: 'turn_valid' };
+  // 1) 턴 제한시간 초과 시에는 무조건 스킵
+  if (isTimeout)
+    return {
+      advanced: await nextTurn(),
+      reason: 'turn_timeout',
+    };
+
+  // 2) 아직 오프라인 유예 시간 내라면, presence 스냅샷이 불안정해도 턴 유지
+  if (elapsed < OFFLINE_GRACE_MS)
+    return { advanced: false, reason: 'grace_period' };
+
+  // 3) 유예 시간이 지난 뒤에만, presence 기준으로 오프라인이면 스킵
+  if (isCurrentOnline) return { advanced: false, reason: 'turn_valid' };
 
   const moved = await nextTurn();
   return {
     advanced: moved,
-    reason: !isCurrentOnline ? 'current_offline' : 'turn_timeout',
+    reason: 'current_offline',
   };
 }
 
