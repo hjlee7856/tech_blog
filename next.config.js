@@ -27,17 +27,15 @@ export default withBundleAnalyzer({
     formats: ['image/avif', 'image/webp'],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    compiler: {
-      // eslint-disable-next-line no-process-env
-      removeConsole: process.env.NODE_ENV === 'production',
-    },
   },
-
+  compiler: {
+    // eslint-disable-next-line no-process-env
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   webpack: (config) => {
     config.resolve.extensions = ['.ts', '.tsx', ...config.resolve.extensions];
     return config;
   },
-
   // See https://react-tweet.vercel.app/next#troubleshooting
   transpilePackages: ['react-tweet'],
 });

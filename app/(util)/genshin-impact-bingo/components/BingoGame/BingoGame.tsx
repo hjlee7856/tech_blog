@@ -322,13 +322,25 @@ export function BingoGame({
 
     let cancelled = false;
 
-    const intervalId = setInterval(() => {
+    const tick = () => {
       if (cancelled) return;
+
+      // 비활성 탭에서는 폴링하지 않음 (여러 탭이 떠 있어도 가급적 1개 탭만 폴링하도록)
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
 
       void fetch('/api/genshin-impact-bingo/check-turn', {
         method: 'POST',
       }).catch(() => undefined);
-    }, 5000);
+    };
+
+    // 즉시 한 번 체크
+    tick();
+
+    const intervalId = setInterval(tick, 5000);
 
     return () => {
       cancelled = true;

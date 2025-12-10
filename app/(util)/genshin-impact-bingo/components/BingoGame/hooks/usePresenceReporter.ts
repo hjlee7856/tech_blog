@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { usePresenceOnlineUsers } from './usePresenceOnlineUsers';
 
-const REPORT_INTERVAL_MS = 10_000;
+const REPORT_INTERVAL_MS = 20_000;
 
 export function usePresenceReporter(userId?: number) {
   const { onlineUserIds } = usePresenceOnlineUsers(userId);
