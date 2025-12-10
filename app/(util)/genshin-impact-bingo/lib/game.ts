@@ -290,13 +290,27 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
     if (!Number.isNaN(diff) && diff > TURN_TIMEOUT_MS) isTimeout = true;
   }
 
-  if (isCurrentOnline && !isTimeout)
+  let isStale = false;
+  if (currentPlayer.last_seen) {
+    const lastSeenAt = new Date(currentPlayer.last_seen);
+    const now = new Date();
+    const diffLastSeen = now.getTime() - lastSeenAt.getTime();
+
+    if (!Number.isNaN(diffLastSeen) && diffLastSeen > TURN_TIMEOUT_MS)
+      isStale = true;
+  }
+
+  if (isCurrentOnline && !isTimeout && !isStale)
     return { advanced: false, reason: 'turn_valid' };
 
   const moved = await nextTurn();
   return {
     advanced: moved,
-    reason: !isCurrentOnline ? 'current_offline' : 'turn_timeout',
+    reason: !isCurrentOnline
+      ? 'current_offline'
+      : isStale
+        ? 'current_stale'
+        : 'turn_timeout',
   };
 }
 
