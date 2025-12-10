@@ -345,6 +345,9 @@ export function BingoBoard({
 
   // 완성된 빙고 라인에 포함된 셀 인덱스 계산
   const bingoLineCells = useMemo(() => {
+    // 게임에 아직 참여하지 않은 상태(order === 0)에서는 빙고 라인 표시 안 함
+    if (playerOrder === 0) return new Set<number>();
+
     // 빙고 라인 정의 (5x5 보드)
     const BINGO_LINES = [
       // 가로
@@ -375,28 +378,62 @@ export function BingoBoard({
       }
     }
     return cells;
-  }, [board, drawnNames]);
+  }, [board, drawnNames, playerOrder]);
 
   const isMatched = useCallback(
     (name: string | null) => {
+      // 게임에 아직 참여하지 않은 상태(order === 0)에서는 매칭 하이라이트를 표시하지 않음
+      if (playerOrder === 0) return false;
       return name !== null && drawnNames.includes(name);
     },
-    [drawnNames],
+    [drawnNames, playerOrder],
   );
 
   const isInBingoLine = (index: number) => bingoLineCells.has(index);
 
   // 모든 셀이 매칭되었는지 확인
   const isAllMatched = useMemo(() => {
+    // 게임에 아직 참여하지 않은 상태(order === 0)에서는 올 매칭 효과를 표시하지 않음
+    if (playerOrder === 0) return false;
+
     const filledCells = board.filter((n) => n !== null);
     if (filledCells.length !== 25) return false;
     return filledCells.every((name) => drawnNames.includes(name as string));
-  }, [board, drawnNames]);
+  }, [board, drawnNames, playerOrder]);
 
   return (
     <Container>
       <Board>
         {board.map((name, index) => {
+          // 보드 편집 가능 단계에서는 매칭/빙고 하이라이트를 적용하지 않고
+          // 항상 일반 셀로 렌더링하여 캐릭터 선택 모달을 열 수 있게 한다.
+          if (canEditBoard) {
+            return (
+              <Cell
+                key={index}
+                onClick={() => handleCellClick(index)}
+                style={{ cursor: 'pointer' }}
+              >
+                {name ? (
+                  <>
+                    <CellImage>
+                      <Image
+                        src={getImagePath(name)}
+                        alt={name}
+                        width={48}
+                        height={48}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </CellImage>
+                    <CellName>{name}</CellName>
+                  </>
+                ) : (
+                  ''
+                )}
+              </Cell>
+            );
+          }
+
           const matched = isMatched(name);
           const inBingoLine = isInBingoLine(index);
 
@@ -467,15 +504,23 @@ export function BingoBoard({
           }
 
           // 내 턴이고 아직 뽑히지 않은 셀 - 선택 가능
+          // 이름 뽑기 중(isDrawing)에는 새로운 선택을 막기 위해 !isDrawing 조건을 포함
           const canSelectForDraw =
             isMyTurn && !isDrawing && name && !drawnNames.includes(name);
 
-          // 선택된 셀 (확인 대기 중)
-          if (canSelectForDraw && selectedForDraw === name) {
+          // 이미 선택된 셀은 이름 뽑기 중(isDrawing)에도 하이라이트 유지
+          if (selectedForDraw === name) {
             return (
               <SelectedForDrawCell
                 key={index}
-                onClick={() => setSelectedForDraw(null)}
+                // 뽑기 진행 중에는 선택 해제 불가
+                onClick={
+                  isDrawing
+                    ? undefined
+                    : () => {
+                        setSelectedForDraw(null);
+                      }
+                }
               >
                 {name && (
                   <>
@@ -520,13 +565,9 @@ export function BingoBoard({
             );
           }
 
-          // 일반 셀
+          // 일반 셀 (게임 진행 중, 편집 불가 단계)
           return (
-            <Cell
-              key={index}
-              onClick={() => handleCellClick(index)}
-              style={{ cursor: canEditBoard ? 'pointer' : 'default' }}
-            >
+            <Cell key={index}>
               {name ? (
                 <>
                   <CellImage>

@@ -1,14 +1,12 @@
 import { useEffect } from 'react';
 import { usePresenceOnlineUsers } from './usePresenceOnlineUsers';
 
-const REPORT_INTERVAL_MS = 20_000;
+const REPORT_INTERVAL_MS = 5000;
 
 export function usePresenceReporter(userId?: number) {
   const { onlineUserIds } = usePresenceOnlineUsers(userId);
 
   useEffect(() => {
-    console.log('[presence-reporter] effect', { userId, onlineUserIds });
-
     // onlineUserIds가 비어 있을 때는 스냅샷을 보내지 않음
     if (onlineUserIds.length === 0) {
       return;
@@ -19,21 +17,13 @@ export function usePresenceReporter(userId?: number) {
         onlineUserIds,
         clientTimestamp: new Date().toISOString(),
       };
-
-      console.log('[presence-reporter] POST /online-users (client)', body);
-
       try {
-        const res = await fetch('/api/genshin-impact-bingo/online-users', {
+        await fetch('/api/genshin-impact-bingo/online-users', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(body),
-        });
-
-        console.log('[presence-reporter] POST /online-users response', {
-          ok: res.ok,
-          status: res.status,
         });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {

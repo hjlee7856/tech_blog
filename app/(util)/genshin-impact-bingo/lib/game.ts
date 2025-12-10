@@ -21,8 +21,8 @@ export interface GameState {
 // 시작 요청 타임아웃 (60초)
 const START_REQUEST_TIMEOUT_MS = 60_000;
 
-// 오프라인으로 간주하기 전 유예 시간 (10초, 서버 턴 검증용)
-const OFFLINE_GRACE_MS = 10_000;
+// 오프라인으로 간주하기 전 유예 시간 (60초, 서버 턴 검증용)
+const OFFLINE_GRACE_MS = 60_000;
 
 export interface Player extends User {
   board: string[];
@@ -257,13 +257,6 @@ export async function nextTurn(
   const nextOrder =
     activePlayers[nextIndex]?.order ?? activePlayers[0]?.order ?? 1;
 
-  console.log('[nextTurn]', {
-    currentOrder: gameState.current_order,
-    nextOrder,
-    activePlayerIds: activePlayers.map((p) => p.id),
-    onlineUserIds,
-  });
-
   const { error } = await supabase
     .from('genshin-bingo-game-state')
     .update({
@@ -289,25 +282,10 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
 
   if (gameState.is_finished) return { advanced: false, reason: 'finished' };
 
-  const [players, snapshotResult] = await Promise.all([
+  const [players, onlineUserIds] = await Promise.all([
     getAllPlayers(),
-    supabase
-      .from('genshin-bingo-online-snapshot')
-      .select('online_user_ids, snapshot_at')
-      .order('snapshot_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    getOnlineUserIds(),
   ]);
-
-  const snapshotRow = snapshotResult.data as {
-    online_user_ids: number[] | null;
-    snapshot_at: string | null;
-  } | null;
-  const onlineUserIds = Array.isArray(snapshotRow?.online_user_ids)
-    ? snapshotRow!.online_user_ids.filter(
-        (id): id is number => typeof id === 'number',
-      )
-    : [];
 
   const activePlayers = players.filter((p) => p.order > 0);
   if (activePlayers.length === 0)
@@ -332,33 +310,16 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
     if (!Number.isNaN(diff)) elapsed = diff;
   }
 
-  // 아직 오프라인 유예 시간 내라면, presence 스냅샷이 불안정해도 턴 유지
+  // 아직 오프라인 유예 시간 내라면, 스냅샷이 불안정해도 턴 유지
   if (elapsed < OFFLINE_GRACE_MS)
     return { advanced: false, reason: 'grace_period' };
 
-  // 유예 시간이 지난 뒤에는, 최신 스냅샷 기준으로 오프라인 판정
+  // 유예 시간이 지난 뒤에는, 최신 온라인 스냅샷 기준으로 오프라인 판정
   const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
 
-  if (isCurrentOnline) {
-    console.log('[validateAndAutoAdvanceTurn] turn_valid', {
-      currentOrder: gameState.current_order,
-      currentPlayerId: currentPlayer.id,
-      onlineUserIds,
-      elapsed,
-    });
+  if (isCurrentOnline) return { advanced: false, reason: 'turn_valid' };
 
-    return { advanced: false, reason: 'turn_valid' };
-  }
-
-  const moved = await nextTurn();
-
-  console.log('[validateAndAutoAdvanceTurn] current_offline', {
-    currentOrder: gameState.current_order,
-    currentPlayerId: currentPlayer.id,
-    onlineUserIds,
-    elapsed,
-    moved,
-  });
+  const moved = await nextTurn(gameState.current_order);
 
   return {
     advanced: moved,
@@ -381,8 +342,7 @@ export async function joinGameInProgress(userId: number): Promise<boolean> {
   const { error } = await supabase
     .from('genshin-bingo-game-user')
     .update({ order: maxOrder + 1 })
-    .eq('id', userId)
-    .eq('order', 0);
+    .eq('id', userId);
 
   return !error;
 }
@@ -787,23 +747,6 @@ export function subscribeToPlayers(callback: (players: Player[]) => void) {
       { event: '*', schema: 'public', table: 'genshin-bingo-game-user' },
       async () => {
         const players = await getAllPlayers();
-        callback(players);
-      },
-    )
-    .subscribe();
-}
-
-export function subscribeToPlayersRanking(
-  callback: (players: Player[]) => void,
-) {
-  const channelName = `players-ranking-${Math.random().toString(36).slice(7)}`;
-  return supabase
-    .channel(channelName)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'genshin-bingo-game-user' },
-      async () => {
-        const players = await getPlayersRanking();
         callback(players);
       },
     )

@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
+import { getPresenceChannel } from './presenceChannel';
 
 interface PresenceMeta {
   user_id?: number;
@@ -14,17 +14,11 @@ export function usePresenceOnlineUsers(userId?: number) {
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {
-    const channel = supabase.channel('genshin-bingo-presence', {
-      config: {
-        presence: {
-          // presence 채널은 플레이어(useOnlineStatus)와 동일 채널을 공유하고,
-          // 여기서는 뷰어/관전자도 같은 채널에서 온라인 유저 목록만 읽어온다.
-          key: `viewer-${Math.random().toString(36).slice(2)}`,
-        },
-      },
-    });
+    if (typeof userId !== 'number') return;
 
-    channel.on('presence', { event: 'sync' }, () => {
+    const channel = getPresenceChannel(userId);
+
+    const updateFromState = () => {
       const state = channel.presenceState() as PresenceState;
 
       const allPresences = Object.values(state).flat();
@@ -38,23 +32,18 @@ export function usePresenceOnlineUsers(userId?: number) {
 
       setOnlineUserCount(count);
       setOnlineUserIds(uniqueIds);
+    };
 
-      console.log('[presence-online-users] onlineUserIds', uniqueIds);
-    });
+    // effect 진입 시점의 state를 한 번 반영
+    updateFromState();
 
-    channel.subscribe((status) => {
-      if (status !== 'SUBSCRIBED') return;
+    // 이후 sync 이벤트마다 다시 반영
+    channel.on('presence', { event: 'sync' }, updateFromState);
 
-      if (typeof userId === 'number') {
-        void channel.track({ role: 'viewer', user_id: userId });
-      } else {
-        void channel.track({ role: 'viewer' });
-      }
-    });
-
+    // 채널 생성/구독/track은 useOnlineStatus에서 담당
     return () => {
-      void channel.untrack();
-      void channel.unsubscribe();
+      setOnlineUserCount(0);
+      setOnlineUserIds([]);
     };
   }, [userId]);
 

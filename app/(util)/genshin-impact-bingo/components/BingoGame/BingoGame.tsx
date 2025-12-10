@@ -68,8 +68,12 @@ import { Chat } from '../Chat';
 import { NicknameChangeModal } from '../NicknameChangeModal';
 import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
-import { useGameData, useOnlineStatus, useStartRequestWatcher } from './hooks';
-import { usePresenceReporter } from './hooks/usePresenceReporter';
+import {
+  useGameData,
+  useOnlineSnapshotUserIds,
+  useOnlineStatus,
+  useStartRequestWatcher,
+} from './hooks';
 import { FinishModal } from './modals';
 
 interface BingoGameProps {
@@ -119,11 +123,12 @@ export function BingoGame({
   const { user, setUser, gameState, players, setPlayers, isLoading } =
     useGameData(gameDataCallbacks);
 
+  // 스냅샷 기반 온라인 유저 목록 (genshin-bingo-online-snapshot) 기준으로 대기
+  const { onlineUserIds } = useOnlineSnapshotUserIds();
+  const isOnlineReady = !user || onlineUserIds.includes(user.id);
+
   // 온라인 상태 관리 훅 (Presence 기반)
   useOnlineStatus(user?.id);
-
-  // presence 기반 온라인 유저 스냅샷을 주기적으로 서버에 보고
-  usePresenceReporter(user?.id);
 
   // 게임 시작 요청 타임아웃/유효성 체크 훅
   useStartRequestWatcher();
@@ -247,8 +252,22 @@ export function BingoGame({
     setIsDrawing(true);
     playSelectSound(); // 선택 효과음
 
-    // 선택한 이름을 drawn_names에 추가
-    const newDrawnNames = [...gameState.drawn_names, selectedName];
+    // 항상 최신 gameState를 기준으로 업데이트
+    const latestState = await getGameState();
+
+    if (!latestState) {
+      alert('이름 뽑기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      setIsDrawing(false);
+      return;
+    }
+
+    // 이미 다른 플레이어가 해당 이름을 뽑은 경우라면 조용히 종료
+    if (latestState.drawn_names.includes(selectedName)) {
+      setIsDrawing(false);
+      return;
+    }
+
+    const newDrawnNames = [...latestState.drawn_names, selectedName];
 
     const { error, data } = await supabase
       .from('genshin-bingo-game-state')
@@ -256,32 +275,32 @@ export function BingoGame({
         drawn_names: newDrawnNames,
       })
       .eq('id', 1)
-      .eq('drawn_names', gameState.drawn_names)
       .select('id')
       .single();
 
-    if (!error && data) {
-      // 게임 종료 체크
-      const finishResult = await checkGameFinish(newDrawnNames);
-      if (finishResult.finished) {
-        const ranking = await getOnlinePlayersRanking();
-        setFinalRanking(ranking);
-        setShowFinishModal(true);
-        setIsDrawing(false);
-        return;
-      }
+    if (error || !data) {
+      alert('이름 뽑기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      setIsDrawing(false);
+      return;
+    }
 
+    // 게임 종료 체크
+    const finishResult = await checkGameFinish(newDrawnNames);
+    if (finishResult.finished) {
+      // 우승자 확정 시에도 점수를 최신 상태로 반영 (예: 12줄 빙고)
       await checkAndUpdateAllScores(newDrawnNames);
+      const ranking = await getOnlinePlayersRanking();
+      setFinalRanking(ranking);
+      setShowFinishModal(true);
+      setIsDrawing(false);
+      return;
+    }
 
-      // 다음 턴으로 (현재 턴 스냅샷을 함께 전달하여 중복 호출 방지)
-      if (typeof gameState.current_order === 'number') {
-        await nextTurn(gameState.current_order);
-      }
-    } else {
-      // 다른 플레이어가 먼저 이름을 뽑았거나, 상태가 변경된 경우 등을 포함해 실패 처리
-      alert(
-        '이름 뽑기에 실패했습니다.\n다른 플레이어가 먼저 이름을 뽑았을 수 있습니다.',
-      );
+    await checkAndUpdateAllScores(newDrawnNames);
+
+    // 다음 턴으로 (현재 턴 스냅샷을 함께 전달하여 중복 호출 방지)
+    if (typeof latestState.current_order === 'number') {
+      await nextTurn(latestState.current_order);
     }
 
     setIsDrawing(false);
@@ -431,7 +450,9 @@ export function BingoGame({
     }
   }, [gameState?.drawn_names.length]);
 
-  if (isLoading) {
+  const isInitialLoading = isLoading || (!!user && !isOnlineReady);
+
+  if (isInitialLoading) {
     return (
       <Container style={{ minHeight: '100vh' }}>
         <p style={{ color: 'white' }}>로딩 중...</p>
@@ -524,14 +545,6 @@ export function BingoGame({
             <strong style={{ color: '#3BA55C' }}>
               {currentTurnPlayer?.name || '대기 중'}
             </strong>
-            {nextTurnPlayer && nextTurnPlayer.id !== currentTurnPlayer?.id && (
-              <>
-                → 다음 턴:{' '}
-                <strong style={{ color: '#5865F2' }}>
-                  {nextTurnPlayer.name}
-                </strong>
-              </>
-            )}
           </TurnInfo>
 
           {isMyTurn && (

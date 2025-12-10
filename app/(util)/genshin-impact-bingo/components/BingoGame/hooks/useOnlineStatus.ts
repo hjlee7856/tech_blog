@@ -1,32 +1,31 @@
-import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useRef } from 'react';
 import { updateOnlineStatus } from '../../../lib/game';
+import { getPresenceChannel } from './presenceChannel';
+
+type PresenceChannel = ReturnType<typeof getPresenceChannel>;
 
 export function useOnlineStatus(userId: number | undefined) {
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<PresenceChannel | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase.channel('genshin-bingo-presence', {
-      config: {
-        presence: {
-          key: String(userId),
-        },
-      },
-    });
-
+    const channel = getPresenceChannel(userId);
     channelRef.current = channel;
 
-    channel.on('presence', { event: 'sync' }, () => {
-      // 필요하면 여기서 presenceState를 읽어 클라이언트 측 online 리스트를 계산할 수 있음
-      // const state = channel.presenceState();
-    });
+    let heartbeatId: ReturnType<typeof setInterval> | null = null;
 
     channel.subscribe((status) => {
       if (status !== 'SUBSCRIBED') return;
       void channel.track({ user_id: userId });
       void updateOnlineStatus(userId, true);
+
+      // 주기적으로 last_seen 갱신 (heartbeat)
+      if (!heartbeatId) {
+        heartbeatId = setInterval(() => {
+          void updateOnlineStatus(userId, true);
+        }, 10_000);
+      }
     });
 
     return () => {
@@ -34,6 +33,7 @@ export function useOnlineStatus(userId: number | undefined) {
       void channelRef.current.untrack();
       void channelRef.current.unsubscribe();
       void updateOnlineStatus(userId, false);
+      if (heartbeatId) clearInterval(heartbeatId);
       channelRef.current = null;
     };
   }, [userId]);

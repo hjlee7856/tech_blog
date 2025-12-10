@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { getProfileImagePath } from '../../../lib/auth';
 import {
   resetGame,
-  startGame,
   subscribeToGameState,
   type Player,
 } from '../../../lib/game';
@@ -99,8 +98,8 @@ export function FinishModal({
 
   const handleRestart = async () => {
     setIsProcessing(true);
+    // 게임 전체 초기화 (보드, 점수, 순서 모두 리셋)
     await resetGame();
-    await startGame(true); // 강제 시작
     setConfirmAction(null);
     setIsProcessing(false);
     onReset();
@@ -113,7 +112,8 @@ export function FinishModal({
         <ConfirmDialog>
           <ConfirmDialogTitle>게임 재시작</ConfirmDialogTitle>
           <ConfirmDialogText>
-            현재 보드를 유지하고 게임을 다시 시작합니다. 계속하시겠습니까?
+            모든 플레이어의 보드와 점수를 초기화하고 새 게임을 준비합니다.
+            {'\n'}보드는 비워진 상태로 대기 화면으로 돌아갑니다.
           </ConfirmDialogText>
           <ConfirmDialogButtons>
             <RestartButton

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { getProfileImagePath } from '../../lib/auth';
 import { getAllPlayers, subscribeToPlayers, type Player } from '../../lib/game';
-import { usePresenceOnlineUsers } from '../BingoGame/hooks';
+import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
   Container,
   PlayerInfo,
@@ -23,14 +23,14 @@ interface ReadyStatusProps {
 
 export function ReadyStatus({ userId }: ReadyStatusProps) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const { onlineUserIds } = usePresenceOnlineUsers(userId);
+  const { onlineUserIds } = useOnlineSnapshotUserIds();
 
   useEffect(() => {
     const init = async () => {
       const allPlayers = await getAllPlayers();
-      // 플레이어 전체를 보관해 두고, 렌더링 시 presence(onlineUserIds)로 온라인만 필터링
       setPlayers(allPlayers);
     };
+
     void init();
 
     const subscription = subscribeToPlayers((allPlayers: Player[]) => {
