@@ -14,10 +14,11 @@ export function usePresenceOnlineUsers(userId?: number) {
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {
-    const channel = supabase.channel('genshin-bingo-presence-view', {
+    const channel = supabase.channel('genshin-bingo-presence', {
       config: {
         presence: {
-          // viewer용 임의 키 (다른 클라이언트와 겹쳐도 문제 없음)
+          // presence 채널은 플레이어(useOnlineStatus)와 동일 채널을 공유하고,
+          // 여기서는 뷰어/관전자도 같은 채널에서 온라인 유저 목록만 읽어온다.
           key: `viewer-${Math.random().toString(36).slice(2)}`,
         },
       },
