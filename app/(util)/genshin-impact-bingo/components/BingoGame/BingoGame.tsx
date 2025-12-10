@@ -348,22 +348,7 @@ export function BingoGame({
       playBingoSound();
     }
     prevMyScoreRef.current = currentScore;
-  }, [myPlayer?.score]);
-
-  // 다음 턴 플레이어 계산
-  const nextTurnPlayer = useMemo(() => {
-    if (!gameState?.is_started) return null;
-    const activePlayers = players
-      .filter((p) => p.order > 0)
-      .toSorted((a, b) => a.order - b.order);
-    if (activePlayers.length === 0) return null;
-
-    const currentIdx = activePlayers.findIndex(
-      (p) => p.order === gameState.current_order,
-    );
-    const nextIdx = (currentIdx + 1) % activePlayers.length;
-    return activePlayers[nextIdx];
-  }, [gameState, players]);
+  }, [myPlayer?.score])
 
   useEffect(() => {
     if (!gameState?.is_started) return;
