@@ -28,13 +28,13 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
   useEffect(() => {
     const init = async () => {
       const allPlayers = await getAllPlayers();
-      // DB is_online 대신 presence 기반으로 필터링하므로 전체 플레이어를 보관
+      // 플레이어 전체를 보관해 두고, 렌더링 시 presence(onlineUserIds)로 온라인만 필터링
       setPlayers(allPlayers);
     };
     void init();
 
     const subscription = subscribeToPlayers((allPlayers: Player[]) => {
-      // DB is_online 대신 presence 기반으로 필터링하므로 전체 플레이어를 보관
+      // 실시간 변경 시에도 전체 플레이어 목록을 갱신한 뒤 presence로 온라인만 표시
       setPlayers(allPlayers);
     });
 

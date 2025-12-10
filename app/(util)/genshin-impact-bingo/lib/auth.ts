@@ -80,9 +80,7 @@ export async function login(
 
     const { data, error } = await supabase
       .from('genshin-bingo-game-user')
-      .select(
-        'id, name, password, score, order, is_admin, is_online, profile_image',
-      )
+      .select('id, name, password, score, order, is_admin, profile_image')
       .eq('name', name)
       .single();
 
@@ -90,9 +88,6 @@ export async function login(
       return { success: false, error: '존재하지 않는 닉네임입니다.' };
     if (data.password !== hashedPassword)
       return { success: false, error: '비밀번호가 일치하지 않습니다.' };
-
-    // 중복 로그인 시 이전 기기에서 로그아웃 처리 (새 기기에서 로그인 허용)
-    // is_online이 true여도 그냥 로그인 허용 (이전 기기는 자동 로그아웃)
 
     const user: User = {
       id: data.id,

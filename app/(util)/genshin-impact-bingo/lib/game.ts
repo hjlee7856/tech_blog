@@ -21,9 +21,7 @@ export interface GameState {
 // 시작 요청 타임아웃 (60초)
 const START_REQUEST_TIMEOUT_MS = 60_000;
 
-// 턴 제한시간 (60초)
-export const TURN_TIMEOUT_MS = 60_000;
-// 오프라인으로 간주하기 전 유예 시간 (10초)
+// 오프라인으로 간주하기 전 유예 시간 (10초, 서버 턴 검증용)
 const OFFLINE_GRACE_MS = 10_000;
 
 export interface Player extends User {
@@ -260,11 +258,10 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
 }
 
 // 현재 턴 검증 및 자동 턴 넘기기
-// - 게임이 진행 중이 아닐 때는 아무 것도 하지 않음
-// - 현재 턴 플레이어가 없는 경우
-// - 현재 턴 플레이어가 온라인이 아닌 경우
-// - 턴 제한시간(TURN_TIMEOUT_MS)을 초과한 경우
-// 위 조건일 때 nextTurn을 호출해 턴을 자동으로 넘김
+// - 게임 상태가 없거나 이미 종료된 경우: 아무 것도 하지 않음
+// - 참여 중인 플레이어(order > 0)가 하나도 없는 경우: 아무 것도 하지 않음
+// - 현재 턴에 해당하는 플레이어가 아예 없으면 비정상 상태로 보고 턴을 넘김
+// - OFFLINE_GRACE_MS 이후, 최신 온라인 스냅샷에 현재 턴 플레이어가 없으면 오프라인으로 간주하고 턴을 넘김
 export async function validateAndAutoAdvanceTurn(): Promise<{
   advanced: boolean;
   reason?: string;
@@ -426,9 +423,9 @@ export async function getPlayersRanking(): Promise<Player[]> {
 }
 
 // 게임 참여 플레이어 순위 조회
-// 게임 시작 전: 온라인 플레이어만 표시 (is_online이 null이면 온라인으로 간주)
-// 게임 시작 후/종료 후: order > 0인 온라인 플레이어만 표시
-// 25칸 완성자(12줄 빙고)가 최우선, 그 다음 score 기준
+// - presence/online snapshot 기반 온라인 유저(onlineUserIds)에 포함된 플레이어만 대상으로 함
+// - 게임 시작 후/종료 후에는 order > 0인 플레이어만 집계
+// - 25칸 완성자(12줄 빙고)가 최우선, 그 다음 score 기준
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const gameState = await getGameState();
 

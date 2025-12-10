@@ -79,31 +79,6 @@ export function useGameData({
 
     const playersSubscription = subscribeToPlayers((playerList) => {
       setPlayers(playerList);
-
-      // const onlineActivePlayers = playerList.filter(
-      //   (p) => p.is_online && p.order > 0,
-      // );
-
-      // 혼자 남으면 게임 리셋 (중복 호출 방지)
-      // if (onlineActivePlayers.length <= 1) {
-      //   void getGameState().then((state) => {
-      //     if (
-      //       state?.is_started &&
-      //       !state.is_finished &&
-      //       !isResettingRef.current
-      //     ) {
-      //       isResettingRef.current = true;
-      //       onAloneInGameRef.current();
-      //       void resetGame().finally(() => {
-      //         setTimeout(() => {
-      //           isResettingRef.current = false;
-      //         }, 1000);
-      //       });
-      //     }
-      //   });
-      //   return;
-      // }
-
       // 플레이어 변경 시에만 턴 체크 (오프라인이거나 게임 미참여 플레이어 턴 스킵)
       void checkAndSkipInvalidTurn(playerList);
     });
