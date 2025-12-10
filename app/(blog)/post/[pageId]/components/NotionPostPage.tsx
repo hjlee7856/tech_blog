@@ -11,13 +11,21 @@ import { mapPageUrl } from '@/lib/map-page-url';
 import { searchNotion } from '@/lib/search-notion';
 import type * as types from '@/lib/types';
 
-import { FloatingScrollTopButton } from '../../../../components/Button/Floating/FloatingScrollTopButton';
-import { ShareButton } from '../../../../components/Button/Share/Share';
-import { Code, Collection, Equation, Modal } from '../../../../components/dynamicImport';
-import { Footer } from '../../../../components/Footer/Footer';
+import { FloatingScrollTopButton } from '../../../../../components/Button/Floating/FloatingScrollTopButton';
+import { ShareButton } from '../../../../../components/Button/Share/Share';
+import {
+  Code,
+  Collection,
+  Equation,
+  Modal,
+} from '../../../../../components/dynamicImport';
+import { Footer } from '../../../../../components/Footer/Footer';
 import { PostOverlay } from './Overlay/PostOverlay';
 
-const propertyTextValue = ({ schema, pageHeader }: any, defaultFn: () => React.ReactNode) => {
+const propertyTextValue = (
+  { schema, pageHeader }: any,
+  defaultFn: () => React.ReactNode,
+) => {
   if (pageHeader && schema?.name?.toLowerCase() === 'author') {
     return <b>{defaultFn()}</b>;
   }
@@ -39,7 +47,8 @@ export function getCollectionRowProps(
   if (!recordMap?.collection || !block?.properties) {
     return { title: '', subtitle: '', category: '' };
   }
-  const collection = (Object.values(recordMap.collection)[0] as { value?: any })?.value;
+  const collection = (Object.values(recordMap.collection)[0] as { value?: any })
+    ?.value;
   const schema = collection?.schema ?? {};
   // 각 property의 key를 schema에서 동적으로 추출
   const titleKey = Object.entries(schema).find(([, v]: any) =>
@@ -54,8 +63,12 @@ export function getCollectionRowProps(
 
   // block에서 실제 값 추출
   const title = titleKey ? (block.properties[titleKey]?.[0]?.[0] ?? '') : '';
-  const subtitle = subtitleKey ? (block.properties[subtitleKey]?.[0]?.[0] ?? '') : '';
-  const category = categoryKey ? (block.properties[categoryKey]?.[0]?.[0] ?? '') : '';
+  const subtitle = subtitleKey
+    ? (block.properties[subtitleKey]?.[0]?.[0] ?? '')
+    : '';
+  const category = categoryKey
+    ? (block.properties[categoryKey]?.[0]?.[0] ?? '')
+    : '';
   return { title, subtitle, category };
 }
 
@@ -63,7 +76,11 @@ interface NotionPostPageProps extends types.PageProps {
   isDarkMode: boolean;
 }
 
-export function NotionPostPage({ site, recordMap, error }: NotionPostPageProps) {
+export function NotionPostPage({
+  site,
+  recordMap,
+  error,
+}: NotionPostPageProps) {
   const lite = useSearchParam('lite');
   const components = React.useMemo<Partial<NotionComponents>>(
     () => ({

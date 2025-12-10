@@ -2,7 +2,7 @@
 
 import type { PageProps } from '@/lib/types';
 import { useDarkMode } from '@/lib/use-dark-mode';
-import { NotionPostPage } from 'app/post/[pageId]/components/NotionPostPage';
+import { NotionPostPage } from 'app/(blog)/post/[pageId]/components/NotionPostPage';
 
 interface NotionPostPageClientProps extends PageProps {
   postId?: string;
