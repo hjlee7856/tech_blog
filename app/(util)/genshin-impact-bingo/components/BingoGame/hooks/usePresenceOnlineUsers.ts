@@ -36,18 +36,10 @@ export function usePresenceOnlineUsers(userId?: number) {
 
       const uniqueIds = Array.from(new Set(ids));
 
-      // presence 기반 온라인 유저 id 디버깅용 로그
-      // (필요 없어진 뒤에는 제거해도 됨)
-
-      console.log('[presence] sync', {
-        userId,
-        rawState: state,
-        allPresencesCount: allPresences.length,
-        uniqueIds,
-      });
-
       setOnlineUserCount(count);
       setOnlineUserIds(uniqueIds);
+
+      console.log('[presence-online-users] onlineUserIds', uniqueIds);
     });
 
     channel.subscribe((status) => {

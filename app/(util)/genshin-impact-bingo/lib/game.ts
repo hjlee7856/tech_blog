@@ -211,10 +211,25 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
     getOnlineUserIds(),
   ]);
 
-  // 게임에 참여 중인(order > 0) 온라인 플레이어들만 조회 (presence/상위 레이어 기반)
-  const activePlayers = players
-    .filter((p) => p.order > 0 && onlineUserIds.includes(p.id))
+  // 게임에 참여 중인(order > 0) 플레이어들
+  const orderedPlayers = players
+    .filter((p) => p.order > 0)
     .toSorted((a, b) => a.order - b.order);
+
+  if (orderedPlayers.length === 0) {
+    // 참여 중인 플레이어가 아예 없으면 게임 종료
+    await supabase
+      .from('genshin-bingo-game-state')
+      .update({ is_finished: true })
+      .eq('id', GAME_STATE_ID);
+    return false;
+  }
+
+  // 온라인 스냅샷이 비어 있지 않을 때만 presence 기반 필터를 적용
+  const activePlayers =
+    onlineUserIds.length > 0
+      ? orderedPlayers.filter((p) => onlineUserIds.includes(p.id))
+      : orderedPlayers;
 
   // 현재 플레이어의 인덱스 찾기
   const currentIndex = activePlayers.findIndex(
@@ -225,6 +240,13 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
   const nextIndex = (currentIndex + 1) % activePlayers.length;
   const nextOrder =
     activePlayers[nextIndex]?.order ?? activePlayers[0]?.order ?? 1;
+
+  console.log('[nextTurn]', {
+    currentOrder: gameState.current_order,
+    nextOrder,
+    activePlayerIds: activePlayers.map((p) => p.id),
+    onlineUserIds,
+  });
 
   const { error } = await supabase
     .from('genshin-bingo-game-state')
@@ -271,36 +293,47 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
     return { advanced: moved, reason: 'missing_current_player' };
   }
 
-  const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
-
   let elapsed = 0;
-  let isTimeout = false;
   if (gameState.turn_started_at) {
     const startedAt = new Date(gameState.turn_started_at);
     const now = new Date();
     const diff = now.getTime() - startedAt.getTime();
 
-    if (!Number.isNaN(diff)) {
-      elapsed = diff;
-      if (diff > TURN_TIMEOUT_MS) isTimeout = true;
-    }
+    if (!Number.isNaN(diff)) elapsed = diff;
   }
 
-  // 1) 턴 제한시간 초과 시에는 무조건 스킵
-  if (isTimeout)
-    return {
-      advanced: await nextTurn(),
-      reason: 'turn_timeout',
-    };
-
-  // 2) 아직 오프라인 유예 시간 내라면, presence 스냅샷이 불안정해도 턴 유지
+  // 아직 오프라인 유예 시간 내라면, presence 스냅샷이 불안정해도 턴 유지
   if (elapsed < OFFLINE_GRACE_MS)
     return { advanced: false, reason: 'grace_period' };
 
-  // 3) 유예 시간이 지난 뒤에만, presence 기준으로 오프라인이면 스킵
-  if (isCurrentOnline) return { advanced: false, reason: 'turn_valid' };
+  // 유예 시간이 지난 뒤에만, presence 스냅샷을 신뢰해서 오프라인 판정
+  // 스냅샷이 비어 있으면 현재 턴을 유지 (오프라인으로 간주하지 않음)
+  const hasSnapshot = onlineUserIds.length > 0;
+  const isCurrentOnline = hasSnapshot
+    ? onlineUserIds.includes(currentPlayer.id)
+    : true;
+
+  if (isCurrentOnline) {
+    console.log('[validateAndAutoAdvanceTurn] turn_valid', {
+      currentOrder: gameState.current_order,
+      currentPlayerId: currentPlayer.id,
+      onlineUserIds,
+      elapsed,
+    });
+
+    return { advanced: false, reason: 'turn_valid' };
+  }
 
   const moved = await nextTurn();
+
+  console.log('[validateAndAutoAdvanceTurn] current_offline', {
+    currentOrder: gameState.current_order,
+    currentPlayerId: currentPlayer.id,
+    onlineUserIds,
+    elapsed,
+    moved,
+  });
+
   return {
     advanced: moved,
     reason: 'current_offline',

@@ -23,6 +23,16 @@ export async function GET() {
     ? row.online_user_ids.filter((id): id is number => typeof id === 'number')
     : [];
 
+  const snapshotDate = row.snapshot_at ? new Date(row.snapshot_at) : null;
+
+  console.log('[online-users][GET] snapshot', {
+    snapshotAtUtc: row.snapshot_at,
+    snapshotAtKst: snapshotDate
+      ? snapshotDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+      : null,
+    onlineUserIds,
+  });
+
   return NextResponse.json({ onlineUserIds });
 }
 
@@ -54,13 +64,48 @@ export async function POST(req: Request) {
 
   const existingRow = existing as OnlineUsersSnapshotRow | null;
 
+  const clientDate = clientTimestamp ? new Date(clientTimestamp) : null;
+  const existingSnapshotDate = existingRow?.snapshot_at
+    ? new Date(existingRow.snapshot_at)
+    : null;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[online-users][POST] incoming', {
+      clientTimestampUtc: clientTimestamp,
+      clientTimestampKst: clientDate
+        ? clientDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+        : null,
+      onlineUserIds,
+      existingSnapshotAtUtc: existingRow?.snapshot_at,
+      existingSnapshotAtKst: existingSnapshotDate
+        ? existingSnapshotDate.toLocaleString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+          })
+        : null,
+    });
+  }
+
   // 기존 스냅샷이 있고, 그 snapshot_at이 더 최신이면 무시
   if (existingRow?.snapshot_at) {
     const prev = new Date(existingRow.snapshot_at).getTime();
     const curr = new Date(clientTimestamp).getTime();
 
-    if (!Number.isNaN(prev) && !Number.isNaN(curr) && prev >= curr)
+    if (!Number.isNaN(prev) && !Number.isNaN(curr) && prev >= curr) {
+      console.log('[online-users][POST] ignore stale snapshot', {
+        prevSnapshotAtUtc: existingRow.snapshot_at,
+        prevSnapshotAtKst: existingSnapshotDate
+          ? existingSnapshotDate.toLocaleString('ko-KR', {
+              timeZone: 'Asia/Seoul',
+            })
+          : null,
+        clientTimestampUtc: clientTimestamp,
+        clientTimestampKst: clientDate
+          ? clientDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+          : null,
+      });
+
       return NextResponse.json({ success: false, reason: 'stale' });
+    }
   }
 
   const { error } = await supabase.from('genshin-bingo-online-snapshot').upsert(
@@ -77,6 +122,14 @@ export async function POST(req: Request) {
       { success: false, reason: 'db_error' },
       { status: 500 },
     );
+
+  console.log('[online-users][POST] updated snapshot', {
+    snapshotAtUtc: clientTimestamp,
+    snapshotAtKst: clientDate
+      ? clientDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+      : null,
+    onlineUserIds,
+  });
 
   return NextResponse.json({ success: true });
 }
