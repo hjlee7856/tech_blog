@@ -244,6 +244,62 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
   return !error;
 }
 
+// 현재 턴 검증 및 자동 턴 넘기기
+// - 게임이 진행 중이 아닐 때는 아무 것도 하지 않음
+// - 현재 턴 플레이어가 없는 경우
+// - 현재 턴 플레이어가 온라인이 아닌 경우
+// - 턴 제한시간(TURN_TIMEOUT_MS)을 초과한 경우
+// 위 조건일 때 nextTurn을 호출해 턴을 자동으로 넘김
+export async function validateAndAutoAdvanceTurn(): Promise<{
+  advanced: boolean;
+  reason?: string;
+}> {
+  const gameState = await getGameState();
+  if (!gameState) return { advanced: false, reason: 'no_game_state' };
+
+  if (!gameState.is_started || gameState.is_finished)
+    return { advanced: false, reason: 'not_running' };
+
+  const [players, onlineUserIds] = await Promise.all([
+    getAllPlayers(),
+    getOnlineUserIds(),
+  ]);
+
+  const activePlayers = players.filter((p) => p.order > 0);
+  if (activePlayers.length === 0)
+    return { advanced: false, reason: 'no_active_players' };
+
+  const currentPlayer = activePlayers.find(
+    (p) => p.order === gameState.current_order,
+  );
+
+  // 현재 턴에 해당하는 플레이어가 아예 없으면 비정상 상태로 보고 턴을 넘김
+  if (!currentPlayer) {
+    const moved = await nextTurn();
+    return { advanced: moved, reason: 'missing_current_player' };
+  }
+
+  const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
+
+  let isTimeout = false;
+  if (gameState.turn_started_at) {
+    const startedAt = new Date(gameState.turn_started_at);
+    const now = new Date();
+    const diff = now.getTime() - startedAt.getTime();
+
+    if (!Number.isNaN(diff) && diff > TURN_TIMEOUT_MS) isTimeout = true;
+  }
+
+  if (isCurrentOnline && !isTimeout)
+    return { advanced: false, reason: 'turn_valid' };
+
+  const moved = await nextTurn();
+  return {
+    advanced: moved,
+    reason: !isCurrentOnline ? 'current_offline' : 'turn_timeout',
+  };
+}
+
 // 게임 중간 참여: 새로운 플레이어에게 순서 부여
 export async function joinGameInProgress(userId: number): Promise<boolean> {
   // 현재 게임에 참여 중인 플레이어들의 최대 순서 조회

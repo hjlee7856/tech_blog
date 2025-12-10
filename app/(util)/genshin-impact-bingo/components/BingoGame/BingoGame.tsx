@@ -317,6 +317,25 @@ export function BingoGame({
     return activePlayers[nextIdx];
   }, [gameState, players]);
 
+  useEffect(() => {
+    if (!gameState?.is_started) return;
+
+    let cancelled = false;
+
+    const intervalId = setInterval(() => {
+      if (cancelled) return;
+
+      void fetch('/api/genshin-impact-bingo/check-turn', {
+        method: 'POST',
+      }).catch(() => undefined);
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [gameState?.is_started]);
+
   // 내 순위 계산 (채팅 자랑용)
   const myRank = useMemo(() => {
     if (!user || !gameState?.is_started) return undefined;
