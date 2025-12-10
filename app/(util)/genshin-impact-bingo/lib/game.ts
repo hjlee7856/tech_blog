@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from './auth';
+import { getOnlineUserIds } from './online';
 
 export interface GameState {
   id: number;
@@ -26,7 +27,6 @@ export const TURN_TIMEOUT_MS = 60_000;
 export interface Player extends User {
   board: string[];
   is_ready: boolean;
-  is_online: boolean;
   last_seen: string;
   bingo_message: string | null;
   bingo_message_at: string | null;
@@ -204,10 +204,14 @@ export async function nextTurn(_totalPlayers?: number): Promise<boolean> {
   const gameState = await getGameState();
   if (!gameState) return false;
 
-  // 게임에 참여 중인(order > 0) 온라인 플레이어들만 조회
-  const players = await getAllPlayers();
+  const [players, onlineUserIds] = await Promise.all([
+    getAllPlayers(),
+    getOnlineUserIds(),
+  ]);
+
+  // 게임에 참여 중인(order > 0) 온라인 플레이어들만 조회 (presence/상위 레이어 기반)
   const activePlayers = players
-    .filter((p) => p.order > 0 && p.is_online)
+    .filter((p) => p.order > 0 && onlineUserIds.includes(p.id))
     .toSorted((a, b) => a.order - b.order);
 
   if (activePlayers.length === 0) {
@@ -259,7 +263,7 @@ export async function getAllPlayers(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')
     .select(
-      'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
+      'id, name, score, order, board, is_admin, is_ready, last_seen, bingo_message, bingo_message_at, profile_image',
     )
     .order('order', { ascending: true });
 
@@ -306,7 +310,7 @@ export async function getPlayersRanking(): Promise<Player[]> {
   const { data, error } = await supabase
     .from('genshin-bingo-game-user')
     .select(
-      'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
+      'id, name, score, order, board, is_admin, is_ready, last_seen, bingo_message, bingo_message_at, profile_image',
     )
     .order('score', { ascending: false });
 
@@ -321,21 +325,21 @@ export async function getPlayersRanking(): Promise<Player[]> {
 export async function getOnlinePlayersRanking(): Promise<Player[]> {
   const gameState = await getGameState();
 
-  const query = supabase
-    .from('genshin-bingo-game-user')
-    .select(
-      'id, name, score, order, board, is_admin, is_ready, is_online, last_seen, profile_image',
-    );
-
-  const { data, error } = await query;
+  const [{ data, error }, onlineUserIds] = await Promise.all([
+    supabase
+      .from('genshin-bingo-game-user')
+      .select(
+        'id, name, score, order, board, is_admin, is_ready, last_seen, bingo_message, bingo_message_at, profile_image',
+      ),
+    getOnlineUserIds(),
+  ]);
 
   if (error) return [];
 
-  // 클라이언트 측에서 필터링
+  // presence/상위 레이어에서 제공하는 온라인 유저 목록을 기준으로 필터링
   let filteredPlayers = (data || []) as Player[];
 
-  // is_online 필터링 (null이면 온라인으로 간주)
-  filteredPlayers = filteredPlayers.filter((p) => p.is_online !== false);
+  filteredPlayers = filteredPlayers.filter((p) => onlineUserIds.includes(p.id));
 
   // 게임 시작 후 또는 종료 후에는 order > 0인 플레이어만
   if (gameState?.is_started || gameState?.is_finished) {
@@ -522,14 +526,13 @@ export async function updateOnlineStatus(
   const { error } = await supabase
     .from('genshin-bingo-game-user')
     .update({
-      is_online: isOnline,
       last_seen: new Date().toISOString(),
     })
     .eq('id', userId);
 
   if (error) return false;
 
-  // 오프라인으로 전환될 때 현재 턴/순서에서 제거
+  // 오프라인으로 전환될 때 현재 턴/순서에서 제거 (presence 기반 트리거)
   if (!isOnline) {
     const gameState = await getGameState();
     if (gameState?.is_started && !gameState.is_finished) {

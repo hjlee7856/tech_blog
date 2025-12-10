@@ -65,7 +65,7 @@ interface RankingProps {
 export function Ranking({ isGameStarted, userId }: RankingProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { onlineUserIds } = usePresenceOnlineUsers();
+  const { onlineUserIds } = usePresenceOnlineUsers(userId);
 
   useEffect(() => {
     const init = async () => {
@@ -142,11 +142,16 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
   );
   const hasMorePlayers = players.length > totalDisplayedPlayers;
 
+  const onlineRankedPlayersCount = players.filter((player) =>
+    onlineUserIds.includes(player.id),
+  ).length;
+
   return (
     <Container>
       <Title>
         실시간 순위
-        {onlineUserIds.length > 0 && ` (온라인 ${onlineUserIds.length}명)`}
+        {onlineRankedPlayersCount > 0 &&
+          ` (온라인 ${onlineRankedPlayersCount}명)`}
       </Title>
       <RankList>
         {displayGroups.map(([rank, groupPlayers]) => {

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { DrawnNamesTitle } from '../../components/BingoGame/BingoGame.styles';
+import { usePresenceOnlineUsers } from '../../components/BingoGame/hooks';
 import { getProfileImagePath } from '../../lib/auth';
 import {
   getAllPlayers,
@@ -44,6 +45,7 @@ export function SpectatorPanel() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { onlineUserIds } = usePresenceOnlineUsers();
 
   useEffect(() => {
     const init = async () => {
@@ -76,8 +78,8 @@ export function SpectatorPanel() {
     };
   }, [selectedPlayer]);
 
-  // 온라인 플레이어만 필터링
-  const onlinePlayers = players.filter((p) => p.is_online);
+  // 온라인 플레이어만 필터링 (presence 기반)
+  const onlinePlayers = players.filter((p) => onlineUserIds.includes(p.id));
 
   const currentTurnPlayer = players.find(
     (p) => p.order === gameState?.current_order,
@@ -151,7 +153,7 @@ export function SpectatorPanel() {
                 <PlayerCard
                   key={player.id}
                   isSelected={selectedPlayer?.id === player.id}
-                  isOnline={player.is_online}
+                  isOnline={onlineUserIds.includes(player.id)}
                   onClick={() => setSelectedPlayer(player)}
                 >
                   <PlayerAvatar>
@@ -164,7 +166,9 @@ export function SpectatorPanel() {
                       height={40}
                       style={{ borderRadius: '50%', objectFit: 'cover' }}
                     />
-                    <OnlineIndicator isOnline={player.is_online} />
+                    <OnlineIndicator
+                      isOnline={onlineUserIds.includes(player.id)}
+                    />
                   </PlayerAvatar>
                   <PlayerInfo>
                     <PlayerName>

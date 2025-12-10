@@ -69,6 +69,7 @@ import { NicknameChangeModal } from '../NicknameChangeModal';
 import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
 import { useGameData, useOnlineStatus, useStartRequestWatcher } from './hooks';
+import { usePresenceReporter } from './hooks/usePresenceReporter';
 import { FinishModal } from './modals';
 
 interface BingoGameProps {
@@ -120,6 +121,9 @@ export function BingoGame({
 
   // 온라인 상태 관리 훅 (Presence 기반)
   useOnlineStatus(user?.id);
+
+  // presence 기반 온라인 유저 스냅샷을 주기적으로 서버에 보고
+  usePresenceReporter(user?.id);
 
   // 게임 시작 요청 타임아웃/유효성 체크 훅
   useStartRequestWatcher();
@@ -278,30 +282,6 @@ export function BingoGame({
   const currentTurnPlayer = players.find(
     (p) => p.order === gameState?.current_order,
   );
-
-  // 디버깅: 턴 상태 로그
-  useEffect(() => {
-    if (gameState?.is_started) {
-      console.log('[턴 디버깅]', {
-        current_order: gameState.current_order,
-        myOrder: myPlayer?.order,
-        isMyTurn,
-        myName: myPlayer?.name,
-        currentTurnPlayerName: currentTurnPlayer?.name,
-        activePlayers: players
-          .filter((p) => p.order > 0)
-          .map((p) => ({ name: p.name, order: p.order })),
-      });
-    }
-  }, [
-    gameState?.current_order,
-    myPlayer?.order,
-    isMyTurn,
-    players,
-    gameState?.is_started,
-    myPlayer?.name,
-    currentTurnPlayer?.name,
-  ]);
 
   // 내 턴이 되었을 때 효과음 재생
   const prevIsMyTurnRef = useRef(false);

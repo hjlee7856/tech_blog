@@ -23,21 +23,19 @@ interface ReadyStatusProps {
 
 export function ReadyStatus({ userId }: ReadyStatusProps) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const { onlineUserIds } = usePresenceOnlineUsers();
+  const { onlineUserIds } = usePresenceOnlineUsers(userId);
 
   useEffect(() => {
     const init = async () => {
       const allPlayers = await getAllPlayers();
-      // 온라인 유저만 표시
-      const onlinePlayers = allPlayers.filter((p) => p.is_online);
-      setPlayers(onlinePlayers);
+      // DB is_online 대신 presence 기반으로 필터링하므로 전체 플레이어를 보관
+      setPlayers(allPlayers);
     };
     void init();
 
     const subscription = subscribeToPlayers((allPlayers: Player[]) => {
-      // 온라인 유저만 표시
-      const onlinePlayers = allPlayers.filter((p) => p.is_online);
-      setPlayers(onlinePlayers);
+      // DB is_online 대신 presence 기반으로 필터링하므로 전체 플레이어를 보관
+      setPlayers(allPlayers);
     });
 
     return () => {
@@ -45,14 +43,18 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
     };
   }, []);
 
+  const visiblePlayers = players.filter((player) =>
+    onlineUserIds.includes(player.id),
+  );
+
   return (
     <Container>
       <Title>
         참가자 준비 상태
-        {onlineUserIds.length > 0 && ` (온라인 ${onlineUserIds.length}명)`}
+        {visiblePlayers.length > 0 && ` (온라인 ${visiblePlayers.length}명)`}
       </Title>
       <PlayerList>
-        {players.map((player) => {
+        {visiblePlayers.map((player) => {
           const isMe = player.id === userId;
           const boardCount = player.board.filter(
             (item) => item !== null && item !== '',
@@ -83,7 +85,7 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
             </PlayerItem>
           );
         })}
-        {players.length === 0 && (
+        {visiblePlayers.length === 0 && (
           <PlayerItem>
             <PlayerName style={{ textAlign: 'center', color: '#B5BAC1' }}>
               온라인 참가자가 없습니다
