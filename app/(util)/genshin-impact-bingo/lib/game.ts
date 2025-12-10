@@ -257,8 +257,7 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   const gameState = await getGameState();
   if (!gameState) return { advanced: false, reason: 'no_game_state' };
 
-  if (!gameState.is_started || gameState.is_finished)
-    return { advanced: false, reason: 'not_running' };
+  if (gameState.is_finished) return { advanced: false, reason: 'finished' };
 
   const [players, onlineUserIds] = await Promise.all([
     getAllPlayers(),
@@ -628,6 +627,7 @@ export async function finishGame(winnerId: number): Promise<boolean> {
   const { error: stateError } = await supabase
     .from('genshin-bingo-game-state')
     .update({
+      is_started: false,
       is_finished: true,
       winner_id: winnerId,
     })
