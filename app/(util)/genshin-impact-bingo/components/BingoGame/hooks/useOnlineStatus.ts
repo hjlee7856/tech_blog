@@ -16,15 +16,26 @@ export function useOnlineStatus(userId: number | undefined) {
     let heartbeatId: ReturnType<typeof setInterval> | null = null;
 
     channel.subscribe((status) => {
+      console.log('[presence] useOnlineStatus subscribe status', {
+        status,
+        userId,
+      });
       if (status !== 'SUBSCRIBED') return;
+      console.log('[presence] useOnlineStatus track start', { userId });
       void channel.track({ user_id: userId });
       void updateOnlineStatus(userId, true);
 
       // 주기적으로 last_seen 갱신 (heartbeat)
       if (!heartbeatId) {
         heartbeatId = setInterval(() => {
+          console.log(
+            '[presence] useOnlineStatus heartbeat updateOnlineStatus',
+            {
+              userId,
+            },
+          );
           void updateOnlineStatus(userId, true);
-        }, 10_000);
+        }, 15_000);
       }
     });
 

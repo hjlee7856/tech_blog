@@ -8,6 +8,7 @@ import {
   subscribeToChatMessages,
   type ChatMessage,
 } from '../../lib/game';
+import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
   BoastBadge,
   BoastButton,
@@ -24,6 +25,7 @@ import {
   MessageProfile,
   MessageText,
   MessageTime,
+  OnlineDot,
   SendButton,
   Title,
 } from './Chat.styles';
@@ -45,11 +47,13 @@ function formatTime(dateString: string): string {
 interface ChatMessageItemProps {
   msg: ChatMessage;
   isMe: boolean;
+  isOnline: boolean;
 }
 
 const ChatMessageItem = memo(function ChatMessageItem({
   msg,
   isMe,
+  isOnline,
 }: ChatMessageItemProps) {
   const formattedTime = useMemo(
     () => formatTime(msg.created_at),
@@ -70,6 +74,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
       <MessageContent>
         <MessageHeaderContainer>
           <MessageName>
+            <OnlineDot isOnline={isOnline} />
             {msg.user_name}
             {isMe && '(나)'}
             {msg.is_boast && msg.rank && <BoastBadge>{msg.rank}위</BoastBadge>}
@@ -104,6 +109,13 @@ export function Chat({
   const [isSending, setIsSending] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
+  const { onlineUserIds: snapshotOnlineUserIds } = useOnlineSnapshotUserIds();
+
+  console.log('[snapshot] Chat render', {
+    userId,
+    snapshotOnlineUserIds,
+    messagesCount: messages.length,
+  });
 
   // 3위권 + 1빙고 이상일 때만 자랑 가능
   const canBoast = useMemo(
@@ -205,6 +217,7 @@ export function Chat({
               key={msg.id}
               msg={msg}
               isMe={msg.user_id === userId}
+              isOnline={snapshotOnlineUserIds.includes(msg.user_id)}
             />
           ))
         )}

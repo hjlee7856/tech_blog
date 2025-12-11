@@ -21,8 +21,8 @@ export interface GameState {
 // 시작 요청 타임아웃 (60초)
 const START_REQUEST_TIMEOUT_MS = 60_000;
 
-// 오프라인으로 간주하기 전 유예 시간 (60초, 서버 턴 검증용)
-const OFFLINE_GRACE_MS = 60_000;
+// 오프라인으로 간주하기 전 유예 시간 (75초, 서버 턴 검증용)
+const OFFLINE_GRACE_MS = 75_000;
 
 export interface Player extends User {
   board: string[];

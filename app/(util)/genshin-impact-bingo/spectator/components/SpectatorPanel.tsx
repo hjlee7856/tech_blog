@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { DrawnNamesTitle } from '../../components/BingoGame/BingoGame.styles';
-import { usePresenceOnlineUsers } from '../../components/BingoGame/hooks';
+import { useOnlineSnapshotUserIds } from '../../components/BingoGame/hooks';
 import { getProfileImagePath } from '../../lib/auth';
 import {
   getAllPlayers,
@@ -45,7 +45,7 @@ export function SpectatorPanel() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { onlineUserIds } = usePresenceOnlineUsers();
+  const { onlineUserIds } = useOnlineSnapshotUserIds();
 
   useEffect(() => {
     const init = async () => {
@@ -78,7 +78,7 @@ export function SpectatorPanel() {
     };
   }, [selectedPlayer]);
 
-  // 온라인 플레이어만 필터링 (presence 기반)
+  // 온라인 플레이어만 필터링 (last_seen 스냅샷 기반)
   const onlinePlayers = players.filter((p) => onlineUserIds.includes(p.id));
 
   const currentTurnPlayer = players.find(

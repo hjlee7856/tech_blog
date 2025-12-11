@@ -135,7 +135,6 @@ export function BingoGame({
   const isOnlineReady =
     !user || hasReportedOnline || onlineUserIds.includes(user.id);
 
-  // 온라인 상태 관리 훅 (Presence 기반)
   useOnlineStatus(user?.id);
 
   // 게임 시작 요청 타임아웃/유효성 체크 훅

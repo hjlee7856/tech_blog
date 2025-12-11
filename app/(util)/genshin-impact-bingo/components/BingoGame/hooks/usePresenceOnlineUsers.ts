@@ -5,8 +5,14 @@ interface PresenceMeta {
   user_id?: number;
 }
 
+// Supabase Realtime presenceState는 보통
+// { [key: string]: { metas: PresenceMeta[] } } 형태를 가정한다.
+interface PresenceStateEntry {
+  metas?: PresenceMeta[];
+}
+
 interface PresenceState {
-  [key: string]: PresenceMeta[];
+  [key: string]: PresenceStateEntry;
 }
 
 export function usePresenceOnlineUsers(userId?: number) {
@@ -14,6 +20,8 @@ export function usePresenceOnlineUsers(userId?: number) {
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {
+    console.log('[presence] usePresenceOnlineUsers effect start', { userId });
+
     if (typeof userId !== 'number') return;
 
     const channel = getPresenceChannel(userId);
@@ -21,7 +29,20 @@ export function usePresenceOnlineUsers(userId?: number) {
     const updateFromState = () => {
       const state = channel.presenceState() as PresenceState;
 
-      const allPresences = Object.values(state).flat();
+      console.log('[presence] usePresenceOnlineUsers presenceState raw', {
+        userId,
+        state,
+      });
+
+      const allPresences = Object.values(state).flatMap((entry) => {
+        if (!entry || !Array.isArray(entry.metas)) return [] as PresenceMeta[];
+        return entry.metas;
+      });
+
+      console.log('[presence] usePresenceOnlineUsers allPresences', {
+        userId,
+        allPresences,
+      });
 
       const count = allPresences.length;
       const ids = allPresences
@@ -29,6 +50,12 @@ export function usePresenceOnlineUsers(userId?: number) {
         .filter((id): id is number => typeof id === 'number');
 
       const uniqueIds = Array.from(new Set(ids));
+
+      console.log('[presence] usePresenceOnlineUsers derived', {
+        userId,
+        count,
+        uniqueIds,
+      });
 
       setOnlineUserCount(count);
       setOnlineUserIds(uniqueIds);

@@ -7,6 +7,7 @@ import { getAllPlayers, subscribeToPlayers, type Player } from '../../lib/game';
 import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
   Container,
+  OnlineDot,
   PlayerInfo,
   PlayerItem,
   PlayerList,
@@ -51,7 +52,7 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
     <Container>
       <Title>
         참가자 준비 상태
-        {visiblePlayers.length > 0 && ` (온라인 ${visiblePlayers.length}명)`}
+        {onlineUserIds.length > 0 && ` (온라인 ${onlineUserIds.length}명)`}
       </Title>
       <PlayerList>
         {visiblePlayers.map((player) => {
@@ -63,6 +64,7 @@ export function ReadyStatus({ userId }: ReadyStatusProps) {
           return (
             <PlayerItem key={player.id} isMe={isMe}>
               <PlayerInfo>
+                <OnlineDot isOnline={onlineUserIds.includes(player.id)} />
                 <ProfileImage>
                   <Image
                     src={getProfileImagePath(player.profile_image || 'Nahida')}

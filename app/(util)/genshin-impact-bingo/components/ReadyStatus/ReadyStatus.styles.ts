@@ -16,6 +16,25 @@ export const Container = styled('div', {
   },
 });
 
+export const OnlineDot = styled('span', {
+  base: {
+    display: 'inline-block',
+    width: '8px',
+    height: '8px',
+    borderRadius: '9999px',
+    marginRight: '6px',
+    backgroundColor: '#4F545C',
+    flexShrink: 0,
+  },
+  variants: {
+    isOnline: {
+      true: {
+        backgroundColor: '#3BA55C',
+      },
+    },
+  },
+});
+
 export const Title = styled('h3', {
   base: {
     fontSize: '14px',

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 // last_seen 기반 온라인 유저 판정 유예 시간 (ms)
 // 브라우저 sleep / heartbeat 지연을 고려해 약간 넉넉하게 유지
-const ONLINE_GRACE_MS = 30_000;
+const ONLINE_GRACE_MS = 45_000;
 
 export async function GET() {
   const { data, error } = await supabase
