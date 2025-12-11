@@ -225,8 +225,15 @@ export async function drawName(
 export async function nextTurn(
   expectedCurrentOrder?: number,
 ): Promise<boolean> {
-  const gameState = await getGameState();
-  if (!gameState) return false;
+  const { data: rawState, error: stateError } = await supabase
+    .from('genshin-bingo-game-state')
+    .select('*')
+    .eq('id', GAME_STATE_ID)
+    .single();
+
+  if (stateError || !rawState) return false;
+
+  const gameState = rawState as GameState;
 
   if (
     typeof expectedCurrentOrder === 'number' &&
@@ -302,8 +309,16 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   advanced: boolean;
   reason?: string;
 }> {
-  const gameState = await getGameState();
-  if (!gameState) return { advanced: false, reason: 'no_game_state' };
+  const { data: rawState, error: stateError } = await supabase
+    .from('genshin-bingo-game-state')
+    .select('*')
+    .eq('id', GAME_STATE_ID)
+    .single();
+
+  if (stateError || !rawState)
+    return { advanced: false, reason: 'no_game_state' };
+
+  const gameState = rawState as GameState;
 
   if (gameState.is_finished) return { advanced: false, reason: 'finished' };
 

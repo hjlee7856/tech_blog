@@ -310,8 +310,6 @@ export function BingoGame({
     if (typeof latestState.current_order === 'number') {
       await nextTurn(latestState.current_order);
     }
-
-    setIsDrawing(false);
   };
 
   // 관리자 게임 초기화
@@ -357,6 +355,25 @@ export function BingoGame({
     }
     prevMyScoreRef.current = currentScore;
   }, [myPlayer?.score]);
+
+  // 턴 시작 시각이 실제로 바뀌면(= 새 턴이 시작되면) 뽑기 상태를 해제해서
+  // 다음 턴에 다시 셀을 선택할 수 있게 한다.
+  // 혼자 남은 경우에도 nextTurn이 turn_started_at을 갱신하므로 정상 동작.
+  const prevTurnStartedAtRef = useRef<string | null>(null);
+  useEffect(() => {
+    const turnStartedAt = gameState?.turn_started_at ?? null;
+
+    if (
+      isDrawing &&
+      prevTurnStartedAtRef.current !== null &&
+      turnStartedAt !== null &&
+      prevTurnStartedAtRef.current !== turnStartedAt
+    ) {
+      setIsDrawing(false);
+    }
+
+    prevTurnStartedAtRef.current = turnStartedAt;
+  }, [gameState?.turn_started_at, isDrawing]);
 
   useEffect(() => {
     if (!gameState?.is_started) return;
