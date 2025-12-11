@@ -9,7 +9,7 @@ import {
   subscribeToOnlinePlayersRanking,
   type Player,
 } from '../../lib/game';
-import { usePresenceOnlineUsers } from '../BingoGame/hooks';
+import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
   Container,
   ExpandButton,
@@ -65,7 +65,7 @@ interface RankingProps {
 export function Ranking({ isGameStarted, userId }: RankingProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { onlineUserIds } = usePresenceOnlineUsers(userId);
+  const { onlineUserIds } = useOnlineSnapshotUserIds({ userId });
 
   useEffect(() => {
     const init = async () => {

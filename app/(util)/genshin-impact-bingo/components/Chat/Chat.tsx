@@ -111,12 +111,6 @@ export function Chat({
   const prevMessageCountRef = useRef(0);
   const { onlineUserIds: snapshotOnlineUserIds } = useOnlineSnapshotUserIds();
 
-  console.log('[snapshot] Chat render', {
-    userId,
-    snapshotOnlineUserIds,
-    messagesCount: messages.length,
-  });
-
   // 3위권 + 1빙고 이상일 때만 자랑 가능
   const canBoast = useMemo(
     () =>

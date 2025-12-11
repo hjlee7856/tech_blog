@@ -1,51 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { updateOnlineStatus } from '../../../lib/game';
-import { getPresenceChannel } from './presenceChannel';
-
-type PresenceChannel = ReturnType<typeof getPresenceChannel>;
 
 export function useOnlineStatus(userId: number | undefined) {
-  const channelRef = useRef<PresenceChannel | null>(null);
-
   useEffect(() => {
     if (!userId) return;
 
-    const channel = getPresenceChannel(userId);
-    channelRef.current = channel;
+    let isCancelled = false;
 
-    let heartbeatId: ReturnType<typeof setInterval> | null = null;
+    // 마운트 시점에 한 번 온라인 표시
+    void updateOnlineStatus(userId, true);
 
-    channel.subscribe((status) => {
-      console.log('[presence] useOnlineStatus subscribe status', {
-        status,
-        userId,
-      });
-      if (status !== 'SUBSCRIBED') return;
-      console.log('[presence] useOnlineStatus track start', { userId });
-      void channel.track({ user_id: userId });
+    // 주기적으로 last_seen 갱신 (heartbeat)
+    const heartbeatId = setInterval(() => {
+      if (isCancelled) return;
       void updateOnlineStatus(userId, true);
-
-      // 주기적으로 last_seen 갱신 (heartbeat)
-      if (!heartbeatId) {
-        heartbeatId = setInterval(() => {
-          console.log(
-            '[presence] useOnlineStatus heartbeat updateOnlineStatus',
-            {
-              userId,
-            },
-          );
-          void updateOnlineStatus(userId, true);
-        }, 15_000);
-      }
-    });
+    }, 15_000);
 
     return () => {
-      if (!channelRef.current) return;
-      void channelRef.current.untrack();
-      void channelRef.current.unsubscribe();
+      isCancelled = true;
+      clearInterval(heartbeatId);
       void updateOnlineStatus(userId, false);
-      if (heartbeatId) clearInterval(heartbeatId);
-      channelRef.current = null;
     };
   }, [userId]);
 }
