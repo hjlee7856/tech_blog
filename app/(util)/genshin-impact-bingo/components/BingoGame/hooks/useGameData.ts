@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+
 import { autoLogin, type User } from '../../../lib/auth';
 import {
   getAllPlayers,
@@ -11,6 +13,7 @@ import {
   type GameState,
   type Player,
 } from '../../../lib/game';
+import { useBingoStore } from '../../../store/bingo-store';
 
 interface UseGameDataProps {
   onGameFinish: (ranking: Player[]) => void;
@@ -19,31 +22,39 @@ interface UseGameDataProps {
 
 interface UseGameDataReturn {
   user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setUser: (user: User | null) => void;
   gameState: GameState | null;
   players: Player[];
-  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  setPlayers: (players: Player[]) => void;
   isLoading: boolean;
+  hasReportedOnline: boolean;
 }
 
 export function useGameData({
   onGameFinish,
   onAloneInGame,
 }: UseGameDataProps): UseGameDataReturn {
-  const [user, setUser] = useState<User | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    user,
+    gameState,
+    players,
+    isLoading,
+    hasInitialized,
+    hasReportedOnline,
+    setUser,
+    setGameState,
+    setPlayers,
+    setIsLoading,
+    setInitialized,
+    setHasReportedOnline,
+  } = useBingoStore();
 
-  // 중복 호출 방지용 ref
   const isSkippingTurnRef = useRef(false);
   const skipTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 콜백을 ref로 저장하여 의존성 배열에서 제거 (재구독 방지)
   const onGameFinishRef = useRef(onGameFinish);
   const onAloneInGameRef = useRef(onAloneInGame);
 
-  // 콜백이 변경되면 ref 업데이트
   useEffect(() => {
     onGameFinishRef.current = onGameFinish;
   }, [onGameFinish]);
@@ -52,23 +63,52 @@ export function useGameData({
     onAloneInGameRef.current = onAloneInGame;
   }, [onAloneInGame]);
 
-  useEffect(() => {
-    const init = async () => {
+  const initQuery = useQuery({
+    queryKey: ['genshin-bingo', 'init'],
+    queryFn: async () => {
       const [authResult, state, playerList] = await Promise.all([
         autoLogin(),
         getGameState(),
         getAllPlayers(),
       ]);
+
+      return { authResult, state, playerList };
+    },
+    staleTime: 1000,
+    enabled: !hasInitialized,
+  });
+
+  useEffect(() => {
+    if (!initQuery.data || hasInitialized) return;
+
+    const { authResult, state, playerList } = initQuery.data;
+
+    const applyInit = async () => {
       if (authResult.success && authResult.user) {
         setUser(authResult.user);
-        await updateOnlineStatus(authResult.user.id, true);
+        const updated = await updateOnlineStatus(authResult.user.id, true);
+        if (updated) setHasReportedOnline();
       }
+
       setGameState(state);
       setPlayers(playerList);
       setIsLoading(false);
+      setInitialized();
     };
-    void init();
 
+    void applyInit();
+  }, [
+    hasInitialized,
+    initQuery.data,
+    setGameState,
+    setInitialized,
+    setIsLoading,
+    setPlayers,
+    setUser,
+    setHasReportedOnline,
+  ]);
+
+  useEffect(() => {
     const gameSubscription = subscribeToGameState(async (state) => {
       setGameState(state);
       if (state.is_finished && state.winner_id) {
@@ -79,7 +119,6 @@ export function useGameData({
 
     const playersSubscription = subscribeToPlayers((playerList) => {
       setPlayers(playerList);
-      // 플레이어 변경 시에만 턴 체크 (오프라인이거나 게임 미참여 플레이어 턴 스킵)
       void checkAndSkipInvalidTurn(playerList);
     });
 
@@ -88,16 +127,13 @@ export function useGameData({
       void playersSubscription.unsubscribe();
     };
 
-    // 유효하지 않은 턴 스킵 함수 (debounce 적용)
     async function checkAndSkipInvalidTurn(playerList: Player[]) {
       if (isSkippingTurnRef.current) return;
 
-      // 이전 타이머 취소
       if (skipTurnTimeoutRef.current) {
         clearTimeout(skipTurnTimeoutRef.current);
       }
 
-      // 300ms 후에 실행 (여러 클라이언트의 동시 호출 방지)
       skipTurnTimeoutRef.current = setTimeout(async () => {
         if (isSkippingTurnRef.current) return;
 
@@ -108,7 +144,6 @@ export function useGameData({
           (p) => p.order === state.current_order,
         );
 
-        // 현재 턴 플레이어가 없거나, 게임 미참여(order=0)인 경우에만 스킵
         const shouldSkip = !currentTurnPlayer || currentTurnPlayer.order <= 0;
 
         if (shouldSkip) {
@@ -120,7 +155,15 @@ export function useGameData({
         }
       }, 300);
     }
-  }, []); // 의존성 배열 비움 - 콜백은 ref로 관리
+  }, [setGameState, setPlayers]);
 
-  return { user, setUser, gameState, players, setPlayers, isLoading };
+  return {
+    user,
+    setUser,
+    gameState,
+    players,
+    setPlayers,
+    isLoading,
+    hasReportedOnline,
+  };
 }

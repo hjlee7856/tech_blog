@@ -1,45 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+
+interface UseOnlineSnapshotUserIdsArgs {
+  userId?: number;
+}
 
 interface UseOnlineSnapshotUserIdsReturn {
   onlineUserIds: number[];
 }
 
-export function useOnlineSnapshotUserIds(): UseOnlineSnapshotUserIdsReturn {
-  const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
+export function useOnlineSnapshotUserIds(
+  args: UseOnlineSnapshotUserIdsArgs = {},
+): UseOnlineSnapshotUserIdsReturn {
+  const { userId } = args;
+
+  const { data, refetch } = useQuery({
+    queryKey: ['genshin-bingo', 'online-users-snapshot'],
+    queryFn: async () => {
+      const response = await fetch('/api/genshin-impact-bingo/online-users');
+      if (!response.ok) return [] as number[];
+
+      const body = (await response.json()) as { onlineUserIds?: unknown };
+      if (!Array.isArray(body.onlineUserIds)) return [] as number[];
+
+      const ids = body.onlineUserIds.filter(
+        (id): id is number => typeof id === 'number',
+      );
+
+      return ids;
+    },
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  });
 
   useEffect(() => {
-    let cancelled = false;
+    if (!userId) return;
+    void refetch();
+  }, [userId, refetch]);
 
-    const fetchSnapshot = async () => {
-      try {
-        const res = await fetch('/api/genshin-impact-bingo/online-users');
-        if (!res.ok) return;
-
-        const data = (await res.json()) as { onlineUserIds?: unknown };
-        if (!Array.isArray(data.onlineUserIds)) return;
-
-        const ids = data.onlineUserIds.filter(
-          (id): id is number => typeof id === 'number',
-        );
-
-        if (cancelled) return;
-        setOnlineUserIds(ids);
-      } catch {
-        // 조회 실패 시에는 조용히 무시 (다음 폴링에서 재시도)
-      }
-    };
-
-    void fetchSnapshot();
-
-    const interval = setInterval(() => {
-      void fetchSnapshot();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  return { onlineUserIds };
+  return { onlineUserIds: data ?? [] };
 }

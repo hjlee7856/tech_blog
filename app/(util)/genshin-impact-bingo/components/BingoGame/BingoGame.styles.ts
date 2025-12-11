@@ -32,6 +32,32 @@ export const Header = styled('div', {
   },
 });
 
+export const HelpButton = styled('button', {
+  base: {
+    position: 'absolute',
+    top: '8px',
+    left: '8px',
+    zIndex: 10,
+    padding: '4px 10px',
+    fontSize: '11px',
+    backgroundColor: '#5865F2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    _hover: {
+      backgroundColor: '#4752C4',
+    },
+    md: {
+      top: '40px',
+      left: '20px',
+      padding: '6px 12px',
+      fontSize: '13px',
+    },
+  },
+});
+
 export const UserInfo = styled('div', {
   base: {
     display: 'flex',

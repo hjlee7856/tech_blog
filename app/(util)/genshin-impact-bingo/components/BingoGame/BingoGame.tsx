@@ -42,6 +42,7 @@ import {
   DrawnNameTag,
   GameStatus,
   Header,
+  HelpButton,
   LogoutButton,
   ModalOverlay,
   ProfileImage,
@@ -92,6 +93,7 @@ export function BingoGame({
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBoardClearConfirm, setShowBoardClearConfirm] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [boardActions, setBoardActions] = useState<BingoBoardActions | null>(
@@ -107,9 +109,7 @@ export function BingoGame({
     playGameFinishSound();
   }, []);
 
-  const handleAloneInGame = useCallback(() => {
-    // 혼자 남음 기능 비활성화됨
-  }, []);
+  const handleAloneInGame = useCallback(() => {}, []);
 
   // 게임 데이터 훅
   const gameDataCallbacks = useMemo(
@@ -120,12 +120,20 @@ export function BingoGame({
     [handleGameFinish, handleAloneInGame],
   );
 
-  const { user, setUser, gameState, players, setPlayers, isLoading } =
-    useGameData(gameDataCallbacks);
+  const {
+    user,
+    setUser,
+    gameState,
+    players,
+    setPlayers,
+    isLoading,
+    hasReportedOnline,
+  } = useGameData(gameDataCallbacks);
 
   // 스냅샷 기반 온라인 유저 목록 (genshin-bingo-online-snapshot) 기준으로 대기
-  const { onlineUserIds } = useOnlineSnapshotUserIds();
-  const isOnlineReady = !user || onlineUserIds.includes(user.id);
+  const { onlineUserIds } = useOnlineSnapshotUserIds({ userId: user?.id });
+  const isOnlineReady =
+    !user || hasReportedOnline || onlineUserIds.includes(user.id);
 
   // 온라인 상태 관리 훅 (Presence 기반)
   useOnlineStatus(user?.id);
@@ -348,7 +356,7 @@ export function BingoGame({
       playBingoSound();
     }
     prevMyScoreRef.current = currentScore;
-  }, [myPlayer?.score])
+  }, [myPlayer?.score]);
 
   useEffect(() => {
     if (!gameState?.is_started) return;
@@ -451,6 +459,11 @@ export function BingoGame({
 
   return (
     <Container>
+      {!user.is_admin && (
+        <HelpButton type="button" onClick={() => setShowHelpModal(true)}>
+          도움말
+        </HelpButton>
+      )}
       <Header>
         <UserInfo>
           <ProfileImage
@@ -692,6 +705,120 @@ export function BingoGame({
                 style={{ backgroundColor: '#3F4147' }}
               >
                 취소
+              </RestartButton>
+            </ConfirmDialogButtons>
+          </ConfirmDialog>
+        </ModalOverlay>
+      )}
+
+      {showHelpModal && (
+        <ModalOverlay>
+          <ConfirmDialog>
+            <ConfirmDialogTitle>도움말</ConfirmDialogTitle>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                textAlign: 'left',
+                color: '#B5BAC1',
+                fontSize: 14,
+              }}
+            >
+              <p
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  marginTop: 0,
+                  marginBottom: 0,
+                  color: '#FFD700',
+                }}
+              >
+                [보드 채우기]
+              </p>
+              <p style={{ margin: 0 }}>
+                - 보드 칸을 클릭해서 직접 캐릭터 이름을 선택해 채울 수 있습니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 이미 채워진 칸을 다시 클릭하면 이름을 지우고 다른 캐릭터로
+                다시 지정할 수 있습니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 아래 '랜덤 채우기' 버튼을 사용하면 보드를 빠르게 자동으로 채울
+                수 있습니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 모두 지우고 처음부터 다시 하고 싶다면 '보드 초기화' 버튼을
+                사용하세요.
+              </p>
+
+              <p
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  marginTop: 12,
+                  marginBottom: 0,
+                  color: '#FFD700',
+                }}
+              >
+                [게임 시작과 진행]
+              </p>
+              <p style={{ margin: 0 }}>
+                - 보드 25칸이 모두 채워지면 '준비하기' 버튼을 눌러 게임 준비
+                상태가 됩니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 2명 이상이 준비되면 게임이 자동으로 시작됩니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 내 턴일 때는 초록색 안내 문구가 보이고, 그때 보드에서 이름을
+                선택해 뽑을 수 있습니다.
+              </p>
+
+              <p
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  marginTop: 12,
+                  marginBottom: 0,
+                  color: '#FFD700',
+                }}
+              >
+                [채팅 사용법]
+              </p>
+              <p style={{ margin: 0 }}>
+                - 화면 아래 채팅 영역에서 메시지를 입력해 다른 참가자와 대화할
+                수 있습니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 채팅 메시지에는 내 점수와 순위 정보도 함께 표시되어 실시간
+                상황을 확인할 수 있습니다.
+              </p>
+              <p
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  marginTop: 12,
+                  marginBottom: 0,
+                  color: '#FFD700',
+                }}
+              >
+                [프로필 및 이름 설정]
+              </p>
+              <p style={{ margin: 0 }}>
+                - 화면 오른쪽 위 프로필 이미지를 눌러 원하는 캐릭터로 프로필
+                사진을 변경할 수 있습니다.
+              </p>
+              <p style={{ margin: 0 }}>
+                - 이름(닉네임)을 클릭하면 닉네임을 변경할 수 있습니다.
+              </p>
+            </div>
+            <ConfirmDialogButtons>
+              <RestartButton
+                onClick={() => setShowHelpModal(false)}
+                style={{ backgroundColor: '#3F4147' }}
+              >
+                닫기
               </RestartButton>
             </ConfirmDialogButtons>
           </ConfirmDialog>

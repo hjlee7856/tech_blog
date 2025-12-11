@@ -53,15 +53,28 @@ const BINGO_LINES = [
   [4, 8, 12, 16, 20],
 ];
 
-export async function getGameState(): Promise<GameState | null> {
-  const { data, error } = await supabase
-    .from('genshin-bingo-game-state')
-    .select('*')
-    .eq('id', GAME_STATE_ID)
-    .single();
+function isWithinLastSeenGrace(lastSeen: string | null | undefined): boolean {
+  if (!lastSeen) return false;
 
-  if (error) return null;
-  return data as GameState;
+  const timestamp = new Date(lastSeen).getTime();
+  if (Number.isNaN(timestamp)) return false;
+
+  const diff = Date.now() - timestamp;
+  return diff <= OFFLINE_GRACE_MS;
+}
+
+export async function getGameState(): Promise<GameState | null> {
+  try {
+    const response = await fetch('/api/genshin-impact-bingo/game-state');
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as { gameState?: unknown };
+    if (!body || typeof body !== 'object' || !body.gameState) return null;
+
+    return body.gameState as GameState;
+  } catch {
+    return null;
+  }
 }
 
 export async function startGame(forceStart = false): Promise<{
@@ -241,11 +254,23 @@ export async function nextTurn(
     return false;
   }
 
-  // 온라인 스냅샷이 비어 있지 않을 때만 presence 기반 필터를 적용
+  // 온라인 스냅샷 + last_seen 기반으로 유효 플레이어 필터링
   const activePlayers =
     onlineUserIds.length > 0
-      ? orderedPlayers.filter((p) => onlineUserIds.includes(p.id))
-      : orderedPlayers;
+      ? orderedPlayers.filter(
+          (p) =>
+            onlineUserIds.includes(p.id) && isWithinLastSeenGrace(p.last_seen),
+        )
+      : orderedPlayers.filter((p) => isWithinLastSeenGrace(p.last_seen));
+
+  // presence/last_seen 기준으로 유효한 플레이어가 한 명도 없으면 게임을 종료 상태로 전환
+  if (activePlayers.length === 0) {
+    await supabase
+      .from('genshin-bingo-game-state')
+      .update({ is_finished: true })
+      .eq('id', GAME_STATE_ID);
+    return false;
+  }
 
   // 현재 플레이어의 인덱스 찾기
   const currentIndex = activePlayers.findIndex(
@@ -287,7 +312,9 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
     getOnlineUserIds(),
   ]);
 
-  const activePlayers = players.filter((p) => p.order > 0);
+  const activePlayers = players.filter(
+    (p) => p.order > 0 && isWithinLastSeenGrace(p.last_seen),
+  );
   if (activePlayers.length === 0)
     return { advanced: false, reason: 'no_active_players' };
 
@@ -314,8 +341,10 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   if (elapsed < OFFLINE_GRACE_MS)
     return { advanced: false, reason: 'grace_period' };
 
-  // 유예 시간이 지난 뒤에는, 최신 온라인 스냅샷 기준으로 오프라인 판정
-  const isCurrentOnline = onlineUserIds.includes(currentPlayer.id);
+  // 유예 시간이 지난 뒤에는, 최신 온라인 스냅샷 + last_seen 기준으로 오프라인 판정
+  const isCurrentOnline =
+    onlineUserIds.includes(currentPlayer.id) &&
+    isWithinLastSeenGrace(currentPlayer.last_seen);
 
   if (isCurrentOnline) return { advanced: false, reason: 'turn_valid' };
 
@@ -355,8 +384,8 @@ export async function getAllPlayers(): Promise<Player[]> {
     )
     .order('order', { ascending: true });
 
-  if (error) return [];
-  return (data || []) as Player[];
+  if (error || !data) return [];
+  return data as Player[];
 }
 
 // 특정 플레이어의 보드 조회

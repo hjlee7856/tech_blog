@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { NextResponse } from 'next/server';
 
 // last_seen 기반 온라인 유저 판정 유예 시간 (ms)
-const ONLINE_GRACE_MS = 15_000;
+// 브라우저 sleep / heartbeat 지연을 고려해 약간 넉넉하게 유지
+const ONLINE_GRACE_MS = 30_000;
 
 export async function GET() {
   const { data, error } = await supabase
