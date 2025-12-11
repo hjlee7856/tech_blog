@@ -336,6 +336,44 @@ export function BingoGame({
     (p) => p.order === gameState?.current_order,
   );
 
+  // 게임이 이미 시작된 상태에서, 보드가 25칸 채워져 있고 order=0이면
+  // 자동으로 게임에 재합류(joinGameInProgress) 시도
+  const hasAutoJoinedRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoJoinedRef.current) return;
+    if (!user) return;
+    if (!gameState?.is_started || gameState.is_finished) return;
+
+    const me = players.find((p) => p.id === user.id);
+    if (!me) return;
+
+    const filledCount = me.board.filter((item) => item && item !== '').length;
+    if (filledCount !== 25) return;
+    if (me.order > 0) {
+      hasAutoJoinedRef.current = true;
+      return;
+    }
+
+    hasAutoJoinedRef.current = true;
+
+    void (async () => {
+      const success = await joinGameInProgress(user.id);
+      if (!success) {
+        hasAutoJoinedRef.current = false;
+        return;
+      }
+
+      const updatedPlayers = await getAllPlayers();
+      setPlayers(updatedPlayers);
+    })();
+  }, [
+    gameState?.is_started,
+    gameState?.is_finished,
+    players,
+    setPlayers,
+    user,
+  ]);
+
   // 내 턴이 되었을 때 효과음 재생
   const prevIsMyTurnRef = useRef(false);
   useEffect(() => {

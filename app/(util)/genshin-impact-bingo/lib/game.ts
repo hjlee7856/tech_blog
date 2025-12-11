@@ -21,8 +21,8 @@ export interface GameState {
 // 시작 요청 타임아웃 (60초)
 const START_REQUEST_TIMEOUT_MS = 60_000;
 
-// 오프라인으로 간주하기 전 유예 시간 (75초, 서버 턴 검증용)
-const OFFLINE_GRACE_MS = 75_000;
+// 오프라인으로 간주하기 전 유예 시간 (45초, 서버 턴 검증용)
+const OFFLINE_GRACE_MS = 45_000;
 
 export interface Player extends User {
   board: string[];
@@ -256,7 +256,7 @@ export async function nextTurn(
     // 참여 중인 플레이어가 아예 없으면 게임 종료
     await supabase
       .from('genshin-bingo-game-state')
-      .update({ is_finished: true })
+      .update({ is_started: false, is_finished: true })
       .eq('id', GAME_STATE_ID);
     return false;
   }
@@ -274,7 +274,7 @@ export async function nextTurn(
   if (activePlayers.length === 0) {
     await supabase
       .from('genshin-bingo-game-state')
-      .update({ is_finished: true })
+      .update({ is_started: false, is_finished: true })
       .eq('id', GAME_STATE_ID);
     return false;
   }
@@ -340,6 +340,15 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   // 현재 턴에 해당하는 플레이어가 아예 없으면 비정상 상태로 보고 턴을 넘김
   if (!currentPlayer) {
     const moved = await nextTurn(gameState.current_order);
+    // 턴이 넘어갈 때, 이전 턴 플레이어를 순서에서 제거하여
+    // 이후 재참여 시 맨 뒤에서 다시 합류하도록 처리
+    const previousCurrentPlayer = players.find(
+      (p) => p.order === gameState.current_order,
+    );
+    if (previousCurrentPlayer) {
+      await updatePlayerOrder(previousCurrentPlayer.id, 0);
+    }
+
     return { advanced: moved, reason: 'missing_current_player' };
   }
 
@@ -364,6 +373,10 @@ export async function validateAndAutoAdvanceTurn(): Promise<{
   if (isCurrentOnline) return { advanced: false, reason: 'turn_valid' };
 
   const moved = await nextTurn(gameState.current_order);
+
+  // 현재 턴 플레이어가 오프라인으로 판정되어 턴이 넘어간 경우,
+  // 해당 플레이어를 순서에서 제거하여 이후 재참여 시 맨 뒤로 합류하게 함
+  await updatePlayerOrder(currentPlayer.id, 0);
 
   return {
     advanced: moved,
@@ -653,7 +666,7 @@ export async function setReadyFalse(userId: number): Promise<boolean> {
 // 온라인 상태 업데이트
 export async function updateOnlineStatus(
   userId: number,
-  isOnline: boolean,
+  _isOnline: boolean,
 ): Promise<boolean> {
   const { error } = await supabase
     .from('genshin-bingo-game-user')
@@ -664,24 +677,8 @@ export async function updateOnlineStatus(
 
   if (error) return false;
 
-  // 오프라인으로 전환될 때 현재 턴/순서에서 제거 (presence 기반 트리거)
-  if (!isOnline) {
-    const gameState = await getGameState();
-    if (gameState?.is_started && !gameState.is_finished) {
-      const players = await getAllPlayers();
-      const player = players.find((p) => p.id === userId);
-
-      if (player && player.order > 0) {
-        const wasCurrentTurn = player.order === gameState.current_order;
-        // 게임 진행 중 나간 경우 순서 제거
-        await updatePlayerOrder(userId, 0);
-
-        // 현재 턴 플레이어였다면 다음 턴으로 넘김
-        if (wasCurrentTurn) await nextTurn(gameState.current_order);
-      }
-    }
-  }
-
+  // 오프라인 전환 시에는 last_seen 만 갱신하고,
+  // 실제 턴 스킵 및 순서 제거는 validateAndAutoAdvanceTurn에서 처리한다.
   return true;
 }
 
