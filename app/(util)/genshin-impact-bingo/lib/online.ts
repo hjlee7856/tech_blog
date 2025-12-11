@@ -1,16 +1,25 @@
+import { supabase } from '@/lib/supabaseClient';
+
+const ONLINE_GRACE_MS = 45_000;
+
 export async function getOnlineUserIds(): Promise<number[]> {
   try {
-    const res = await fetch('/api/genshin-impact-bingo/online-users');
+    const { data, error } = await supabase
+      .from('genshin-bingo-game-user')
+      .select('id, last_seen');
 
-    if (!res.ok) return [];
+    if (error || !data) return [];
 
-    const data = (await res.json()) as { onlineUserIds?: number[] };
+    const now = Date.now();
 
-    if (!Array.isArray(data.onlineUserIds)) return [];
-
-    return data.onlineUserIds.filter(
-      (id): id is number => typeof id === 'number',
-    );
+    return (data as { id: number; last_seen: string | null }[])
+      .filter((row) => {
+        if (!row.last_seen) return false;
+        const t = new Date(row.last_seen).getTime();
+        if (Number.isNaN(t)) return false;
+        return now - t <= ONLINE_GRACE_MS;
+      })
+      .map((row) => row.id);
   } catch {
     return [];
   }

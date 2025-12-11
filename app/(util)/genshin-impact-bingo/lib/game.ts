@@ -22,7 +22,7 @@ export interface GameState {
 const START_REQUEST_TIMEOUT_MS = 60_000;
 
 // 오프라인으로 간주하기 전 유예 시간 (45초, 서버 턴 검증용)
-const OFFLINE_GRACE_MS = 45_000;
+export const OFFLINE_GRACE_MS = 45_000;
 
 export interface Player extends User {
   board: string[];
@@ -65,13 +65,15 @@ function isWithinLastSeenGrace(lastSeen: string | null | undefined): boolean {
 
 export async function getGameState(): Promise<GameState | null> {
   try {
-    const response = await fetch('/api/genshin-impact-bingo/game-state');
-    if (!response.ok) return null;
+    const { data, error } = await supabase
+      .from('genshin-bingo-game-state')
+      .select('*')
+      .eq('id', GAME_STATE_ID)
+      .single();
 
-    const body = (await response.json()) as { gameState?: unknown };
-    if (!body || typeof body !== 'object' || !body.gameState) return null;
+    if (error || !data) return null;
 
-    return body.gameState as GameState;
+    return data as GameState;
   } catch {
     return null;
   }
@@ -757,6 +759,9 @@ export async function checkGameFinish(
     // 첫 번째 승자를 대표로 게임 종료 (공동 1등인 경우에도 동일)
     const winnerId = winners[0];
     if (winnerId !== undefined) {
+      // 게임 종료 시점에는 모든 참여 플레이어의 점수가 최신 상태여야 하므로
+      // 한 번 더 전체 점수 재계산을 수행한 뒤 게임을 종료한다.
+      await checkAndUpdateAllScores(drawnNames);
       await finishGame(winnerId);
       return { finished: true, winnerId };
     }

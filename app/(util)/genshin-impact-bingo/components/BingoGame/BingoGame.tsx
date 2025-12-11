@@ -17,6 +17,7 @@ import {
   getOnlinePlayersRanking,
   joinGameInProgress,
   nextTurn,
+  OFFLINE_GRACE_MS,
   resetGame,
   startGame,
   toggleReady,
@@ -420,12 +421,15 @@ export function BingoGame({
     const tick = () => {
       if (cancelled) return;
 
-      // 비활성 탭에서는 폴링하지 않음 (여러 탭이 떠 있어도 가급적 1개 탭만 폴링하도록)
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
+      if (!gameState?.turn_started_at) return;
+
+      const startedAt = new Date(gameState.turn_started_at).getTime();
+      if (Number.isNaN(startedAt)) return;
+
+      const elapsed = Date.now() - startedAt;
+
+      // OFFLINE_GRACE_MS 이전에는 굳이 /check-turn을 자주 호출하지 않는다.
+      if (elapsed < OFFLINE_GRACE_MS) return;
 
       void fetch('/api/genshin-impact-bingo/check-turn', {
         method: 'POST',
@@ -435,13 +439,14 @@ export function BingoGame({
     // 즉시 한 번 체크
     tick();
 
+    // 기본 폴링 주기를 5초로 유지 (턴 경과 시간 조건으로 추가 필터링)
     const intervalId = setInterval(tick, 5000);
 
     return () => {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [gameState?.is_started]);
+  }, [gameState?.is_started, gameState?.turn_started_at]);
 
   // 내 순위 계산 (채팅 자랑용)
   const myRank = useMemo(() => {
@@ -663,6 +668,9 @@ export function BingoGame({
         myRank={myRank}
         isGameStarted={gameState?.is_started}
       />
+
+      {/* presence 디버그용 (개발 모드에서만 동작, UI에는 표시 X) */}
+      {/* <PresenceDebug userId={user.id} /> */}
 
       {/* 게임 시작 전: 준비 상태, 게임 시작 후: 실시간 순위 */}
       {!gameState?.is_started ? (

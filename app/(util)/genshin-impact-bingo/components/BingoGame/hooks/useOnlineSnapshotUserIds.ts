@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { getOnlineUserIds } from '../../../lib/online';
+
 interface UseOnlineSnapshotUserIdsArgs {
   userId?: number;
 }
@@ -16,19 +18,7 @@ export function useOnlineSnapshotUserIds(
 
   const { data, refetch } = useQuery({
     queryKey: ['genshin-bingo', 'online-users-snapshot'],
-    queryFn: async () => {
-      const response = await fetch('/api/genshin-impact-bingo/online-users');
-      if (!response.ok) return [] as number[];
-
-      const body = (await response.json()) as { onlineUserIds?: unknown };
-      if (!Array.isArray(body.onlineUserIds)) return [] as number[];
-
-      const ids = body.onlineUserIds.filter(
-        (id): id is number => typeof id === 'number',
-      );
-
-      return ids;
-    },
+    queryFn: async () => getOnlineUserIds(),
     refetchInterval: 5000,
     refetchOnWindowFocus: true,
   });
