@@ -35,7 +35,7 @@ export interface Player extends User {
 const GAME_STATE_ID = 1;
 
 // 빙고 라인 정의 (5x5 보드)
-const BINGO_LINES = [
+export const BINGO_LINES = [
   // 가로
   [0, 1, 2, 3, 4],
   [5, 6, 7, 8, 9],
