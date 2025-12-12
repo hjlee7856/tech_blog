@@ -52,6 +52,17 @@ function formatTime(dateString: string): string {
   return `${year}-${month}-${day} ${period} ${displayHours}:${minutes}`;
 }
 
+function isNearBottom(args: {
+  element: HTMLDivElement;
+  thresholdPx: number;
+}): boolean {
+  const { element, thresholdPx } = args;
+
+  const remaining =
+    element.scrollHeight - element.scrollTop - element.clientHeight;
+  return remaining <= thresholdPx;
+}
+
 interface ChatMessageItemProps {
   msg: ChatMessage;
   isMe: boolean;
@@ -144,6 +155,7 @@ export function Chat({
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isRequestPanelOpen, setIsRequestPanelOpen] = useState(false);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
 
@@ -196,15 +208,38 @@ export function Chat({
       void subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const element = messageListRef.current;
+    if (!element) return;
+
+    const thresholdPx = 24;
+
+    const handleScroll = () => {
+      const nextIsEnabled = isNearBottom({ element, thresholdPx });
+      setIsAutoScrollEnabled((prev) => {
+        if (prev === nextIsEnabled) return prev;
+        return nextIsEnabled;
+      });
+    };
+
+    handleScroll();
+    element.addEventListener('scroll', handleScroll);
+    return () => {
+      element.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   useEffect(() => {
     if (
       messages.length > prevMessageCountRef.current &&
-      messageListRef.current
+      messageListRef.current &&
+      isAutoScrollEnabled
     ) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages.length]);
+  }, [messages.length, isAutoScrollEnabled]);
 
   const handleSend = useCallback(async () => {
     if (!userId || !userName || !inputValue.trim() || isSending) return;
