@@ -44,17 +44,20 @@ export function useChatPresence(
     if (!userId) return '';
     if (typingUsers.length === 0) return '';
 
-    const typingNames = typingUsers.map((u) => u.name);
-    const uniqueNames = [...new Set(typingNames)];
-    const visibleNames = uniqueNames.slice(0, 3);
-    const restCount = uniqueNames.length - visibleNames.length;
+    const uniqueUsers = Array.from(
+      new Map(typingUsers.map((u) => [u.id, u])).values(),
+    );
 
-    const namesPart =
-      restCount > 0
-        ? `${visibleNames.join(', ')} 외 ${restCount}명`
-        : visibleNames.join(', ');
+    const visibleUsers = uniqueUsers.slice(0, 3);
+    const restCount = uniqueUsers.length - visibleUsers.length;
 
-    return `${namesPart} 입력중...`;
+    const visibleNames = visibleUsers.map((u) => u.name);
+    if (visibleNames.length === 0) return '';
+
+    if (restCount > 0)
+      return `${visibleNames.join(', ')}님 외 ${restCount}명이 입력 중입니다`;
+
+    return `${visibleNames.join(', ')}님이 입력 중입니다`;
   }, [typingUsers, userId]);
 
   useEffect(() => {
