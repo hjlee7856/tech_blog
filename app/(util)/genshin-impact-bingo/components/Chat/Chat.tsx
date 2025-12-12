@@ -34,6 +34,8 @@ import {
   RequestCharacterPanel,
   SendButton,
   Title,
+  TypingAvatar,
+  TypingAvatarStack,
   TypingIndicator,
 } from './Chat.styles';
 import { useChatPresence } from './useChatPresence';
@@ -145,10 +147,12 @@ export function Chat({
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
 
-  const { typingUsers, typingText, onLocalInputActivity } = useChatPresence({
-    userId,
-    userName,
-  });
+  const { typingUsers, typingText, onLocalInputActivity, stopTyping } =
+    useChatPresence({
+      userId,
+      userName,
+      profileImage,
+    });
 
   const nameMap = useMemo(() => {
     if (!characterNames || !characterEnNames) return new Map<string, string>();
@@ -206,16 +210,20 @@ export function Chat({
     if (!userId || !userName || !inputValue.trim() || isSending) return;
 
     setIsSending(true);
-    await sendChatMessage(
-      userId,
-      userName,
-      profileImage || 'Arama',
-      inputValue.trim(),
-    );
-    setInputValue('');
-    setIsSending(false);
-    setIsRequestPanelOpen(false);
-  }, [userId, userName, profileImage, inputValue, isSending]);
+    try {
+      await sendChatMessage(
+        userId,
+        userName,
+        profileImage || 'Arama',
+        inputValue.trim(),
+      );
+      setInputValue('');
+      setIsRequestPanelOpen(false);
+    } finally {
+      stopTyping();
+      setIsSending(false);
+    }
+  }, [userId, userName, profileImage, inputValue, isSending, stopTyping]);
 
   const handleBoast = useCallback(async () => {
     if (!userId || !userName || !canBoast || isSending || !myScore || !myRank)
@@ -301,7 +309,27 @@ export function Chat({
       </MessageList>
       {userId && (
         <InputSection>
-          <TypingIndicator>{typingText}</TypingIndicator>
+          <TypingIndicator>
+            {typingUsers.length > 0 && (
+              <TypingAvatarStack>
+                {typingUsers.slice(0, 3).map((u) => {
+                  const profileImageKey = u.profileImage || 'Arama';
+                  return (
+                    <TypingAvatar key={u.id}>
+                      <Image
+                        src={getProfileImagePath(profileImageKey)}
+                        alt={profileImageKey}
+                        width={18}
+                        height={18}
+                        style={{ borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    </TypingAvatar>
+                  );
+                })}
+              </TypingAvatarStack>
+            )}
+            {typingText}
+          </TypingIndicator>
           <ChatInput
             type="text"
             placeholder="메시지를 입력하세요..."

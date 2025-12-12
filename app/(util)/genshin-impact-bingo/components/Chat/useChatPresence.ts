@@ -7,6 +7,8 @@ import {
   releasePresenceChannel,
 } from '../BingoGame/hooks/presenceClient';
 
+const TYPING_OFF_DELAY_MS = 7000;
+
 // 채팅 입력중(typing) 상태를 Supabase Presence로 공유/구독하는 훅입니다.
 // - 자기 자신은 typing 목록/텍스트에서 제외합니다.
 // - 채널이 SUBSCRIBED 된 이후에만 track 합니다.
@@ -14,21 +16,23 @@ import {
 interface UseChatPresenceArgs {
   userId?: number;
   userName?: string;
+  profileImage?: string;
 }
 
 interface UseChatPresenceReturn {
-  typingUsers: Array<{ id: number; name: string }>;
+  typingUsers: Array<{ id: number; name: string; profileImage?: string }>;
   typingText: string;
   onLocalInputActivity: () => void;
+  stopTyping: () => void;
 }
 
 export function useChatPresence(
   args: UseChatPresenceArgs = {},
 ): UseChatPresenceReturn {
-  const { userId, userName } = args;
+  const { userId, userName, profileImage } = args;
 
   const [typingUsers, setTypingUsers] = useState<
-    Array<{ id: number; name: string }>
+    Array<{ id: number; name: string; profileImage?: string }>
   >([]);
 
   const typingOffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -44,20 +48,20 @@ export function useChatPresence(
     if (!userId) return '';
     if (typingUsers.length === 0) return '';
 
-    const uniqueUsers = Array.from(
-      new Map(typingUsers.map((u) => [u.id, u])).values(),
-    );
+    const visibleUsers = typingUsers.slice(0, 3);
+    const restCount = typingUsers.length - visibleUsers.length;
 
-    const visibleUsers = uniqueUsers.slice(0, 3);
-    const restCount = uniqueUsers.length - visibleUsers.length;
-
-    const visibleNames = visibleUsers.map((u) => u.name);
+    const visibleNames = visibleUsers
+      .map((u) => u.name)
+      .filter((name) => !!name);
     if (visibleNames.length === 0) return '';
 
-    if (restCount > 0)
-      return `${visibleNames.join(', ')}님 외 ${restCount}명이 입력 중입니다`;
+    const visibleNamesWithNim = visibleNames.map((name) => `${name}님`);
 
-    return `${visibleNames.join(', ')}님이 입력 중입니다`;
+    if (restCount > 0)
+      return `${visibleNamesWithNim.join(', ')} 외 ${restCount}명이 입력 중입니다`;
+
+    return `${visibleNamesWithNim.join(', ')}이 입력 중입니다`;
   }, [typingUsers, userId]);
 
   useEffect(() => {
@@ -76,21 +80,43 @@ export function useChatPresence(
 
       const allMetas = Object.values(parsedState).flatMap((bucket) =>
         Array.isArray(bucket) ? bucket : [],
-      ) as Array<{ user_id?: number; user_name?: string; typing?: boolean }>;
+      ) as Array<{
+        user_id?: number;
+        user_name?: string;
+        profile_image?: string;
+        typing?: boolean;
+      }>;
 
       const nextTypingUsers = allMetas
-        .filter((meta) => meta.typing)
-        .map((meta) => {
-          const id =
-            typeof meta.user_id === 'number' ? meta.user_id : undefined;
-          if (!id) return null;
+        .flatMap((meta) => {
+          if (!meta.typing) return [];
+          if (typeof meta.user_id !== 'number') return [];
+
+          const id = meta.user_id;
           const name = meta.user_name?.trim() ? meta.user_name : `user-${id}`;
-          return { id, name };
+          const nextProfileImage = meta.profile_image?.trim()
+            ? meta.profile_image
+            : undefined;
+
+          return [
+            {
+              id,
+              name,
+              ...(nextProfileImage ? { profileImage: nextProfileImage } : {}),
+            },
+          ];
         })
-        .filter((u): u is { id: number; name: string } => !!u)
         .filter((u) => u.id !== userId);
 
-      setTypingUsers(nextTypingUsers);
+      const uniqueSortedTypingUsers = Array.from(
+        new Map(nextTypingUsers.map((u) => [u.id, u])).values(),
+      ).toSorted((a, b) => {
+        const nameCompare = a.name.localeCompare(b.name, 'ko');
+        if (nameCompare !== 0) return nameCompare;
+        return a.id - b.id;
+      });
+
+      setTypingUsers(uniqueSortedTypingUsers);
     };
 
     const subscription = channel
@@ -104,6 +130,7 @@ export function useChatPresence(
         void channel.track({
           user_id: userId,
           user_name: userName ?? `user-${userId}`,
+          profile_image: profileImage,
           typing: false,
           sent_at: new Date().toISOString(),
         });
@@ -119,7 +146,7 @@ export function useChatPresence(
       releasePresenceChannel({ userId });
       setTypingUsers([]);
     };
-  }, [userId, userName]);
+  }, [userId, userName, profileImage]);
 
   const setMyTyping = useCallback(
     (nextIsTyping: boolean) => {
@@ -133,12 +160,19 @@ export function useChatPresence(
       void channel.track({
         user_id: userId,
         user_name: userName ?? `user-${userId}`,
+        profile_image: profileImage,
         typing: nextIsTyping,
         sent_at: new Date().toISOString(),
       });
     },
-    [userId, userName],
+    [userId, userName, profileImage],
   );
+
+  const stopTyping = useCallback(() => {
+    if (typingOffTimeoutRef.current) clearTimeout(typingOffTimeoutRef.current);
+    typingOffTimeoutRef.current = null;
+    setMyTyping(false);
+  }, [setMyTyping]);
 
   const onLocalInputActivity = useCallback(() => {
     setMyTyping(true);
@@ -146,12 +180,13 @@ export function useChatPresence(
 
     typingOffTimeoutRef.current = setTimeout(() => {
       setMyTyping(false);
-    }, 3000);
+    }, TYPING_OFF_DELAY_MS);
   }, [setMyTyping]);
 
   return {
     typingUsers,
     typingText,
     onLocalInputActivity,
+    stopTyping,
   };
 }

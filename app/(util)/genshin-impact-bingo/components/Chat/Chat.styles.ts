@@ -219,9 +219,36 @@ export const InputSection = styled('div', {
 export const TypingIndicator = styled('div', {
   base: {
     minHeight: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
     fontSize: '12px',
     color: '#B5BAC1',
     paddingLeft: '2px',
+  },
+});
+
+export const TypingAvatarStack = styled('div', {
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0px',
+    flexShrink: 0,
+  },
+});
+
+export const TypingAvatar = styled('div', {
+  base: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    border: '2px solid #2B2D31',
+    boxSizing: 'border-box',
+    marginLeft: '-6px',
+    _first: {
+      marginLeft: '0px',
+    },
   },
 });
 
