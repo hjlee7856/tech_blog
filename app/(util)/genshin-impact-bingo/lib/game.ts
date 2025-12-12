@@ -1048,6 +1048,63 @@ export async function sendChatMessage(
   return !error;
 }
 
+// 특별 요청 메시지 전송 (채팅 문자열에 메타데이터 인코딩)
+const REQUEST_MESSAGE_PREFIX = 'REQUEST::';
+
+export function buildRequestMessage({
+  characterKey,
+  text,
+}: {
+  characterKey: string
+  text: string
+}): string {
+  if (!text.trim()) return ''
+  return `${REQUEST_MESSAGE_PREFIX}${characterKey}::${text.trim()}`
+}
+
+export function parseRequestMessage(message: string): {
+  isRequest: boolean
+  characterKey?: string
+  text: string
+} {
+  if (!message.startsWith(REQUEST_MESSAGE_PREFIX)) {
+    return { isRequest: false, text: message }
+  }
+
+  const withoutPrefix = message.slice(REQUEST_MESSAGE_PREFIX.length)
+  const [characterKey, ...rest] = withoutPrefix.split('::')
+  const text = rest.join('::') || ''
+
+  if (!characterKey || !text.trim()) {
+    return { isRequest: false, text: message }
+  }
+
+  return {
+    isRequest: true,
+    characterKey,
+    text,
+  }
+}
+
+export async function sendRequestChatMessage({
+  userId,
+  userName,
+  profileImage,
+  characterKey,
+  text,
+}: {
+  userId: number
+  userName: string
+  profileImage: string
+  characterKey: string
+  text: string
+}): Promise<boolean> {
+  const encoded = buildRequestMessage({ characterKey, text })
+  if (!encoded) return false
+
+  return sendChatMessage(userId, userName, profileImage, encoded)
+}
+
 // 채팅 메시지 조회 (최근 50개)
 export async function getChatMessages(): Promise<ChatMessage[]> {
   const { data, error } = await supabase

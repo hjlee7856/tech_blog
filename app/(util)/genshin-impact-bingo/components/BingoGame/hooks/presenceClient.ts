@@ -1,18 +1,46 @@
 import { supabase } from '@/lib/supabaseClient';
 
 let presenceChannel: ReturnType<typeof supabase.channel> | null = null;
+let presenceKey: string | null = null;
 
-export function getPresenceChannel() {
+interface GetPresenceChannelParams {
+  userId: number;
+}
+
+export function getPresenceChannel({ userId }: GetPresenceChannelParams) {
+  const nextPresenceKey = String(userId);
+  if (presenceChannel && presenceKey && presenceKey !== nextPresenceKey) {
+    void supabase.removeChannel(presenceChannel);
+    presenceChannel = null;
+    presenceKey = null;
+  }
+
   if (!presenceChannel) {
+    presenceKey = nextPresenceKey;
     presenceChannel = supabase.channel('presence', {
       config: {
         presence: {
-          // key는 presences를 구분하는 식별자. 여기서는 단순 예제로 'user_id' 사용
-          key: 'genshin-bingo-presence',
+          key: nextPresenceKey,
         },
       },
     });
   }
 
   return presenceChannel;
+}
+
+interface ReleasePresenceChannelParams {
+  userId: number;
+}
+
+export function releasePresenceChannel({
+  userId,
+}: ReleasePresenceChannelParams) {
+  const nextPresenceKey = String(userId);
+  if (!presenceChannel || !presenceKey) return;
+  if (presenceKey !== nextPresenceKey) return;
+
+  void supabase.removeChannel(presenceChannel);
+  presenceChannel = null;
+  presenceKey = null;
 }

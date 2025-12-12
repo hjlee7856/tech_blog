@@ -1,10 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { DrawnNamesTitle } from '../../components/BingoGame/BingoGame.styles';
 import { useOnlineSnapshotUserIds } from '../../components/BingoGame/hooks';
-import { getProfileImagePath } from '../../lib/auth';
+import { Ranking } from '../../components/Ranking';
 import {
   getAllPlayers,
   getGameState,
@@ -19,25 +18,12 @@ import {
   DrawnNamesList,
   DrawnNamesSection,
   DrawnNameTag,
-  EmptyState,
-  EmptyText,
   GameStatusBar,
   MainContent,
-  OnlineIndicator,
-  PlayerAvatar,
-  PlayerCard,
-  PlayerInfo,
-  PlayerList,
-  PlayerListSection,
-  PlayerName,
-  PlayerScore,
-  PlayerStatus,
-  SectionTitle,
   StatusItem,
   StatusLabel,
   StatusValue,
   Title,
-  TurnIndicator,
 } from './SpectatorPanel.styles';
 
 export function SpectatorPanel() {
@@ -98,7 +84,7 @@ export function SpectatorPanel() {
       <Title>관전 페이지</Title>
 
       {/* 게임 상태 바 */}
-      <GameStatusBar>
+      <GameStatusBar style={{ flexDirection: 'column' }}>
         <StatusItem>
           <StatusLabel>상태:</StatusLabel>
           <StatusValue
@@ -117,12 +103,6 @@ export function SpectatorPanel() {
                 : '대기 중'}
           </StatusValue>
         </StatusItem>
-
-        <StatusItem>
-          <StatusLabel>온라인:</StatusLabel>
-          <StatusValue>{onlinePlayers.length}명</StatusValue>
-        </StatusItem>
-
         {gameState?.is_started && currentTurnPlayer && (
           <StatusItem>
             <StatusLabel>현재 턴:</StatusLabel>
@@ -138,67 +118,7 @@ export function SpectatorPanel() {
       </GameStatusBar>
 
       <MainContent>
-        {/* 플레이어 목록 */}
-        <PlayerListSection>
-          <SectionTitle>
-            🟢 온라인 플레이어 ({onlinePlayers.length})
-          </SectionTitle>
-          <PlayerList>
-            {onlinePlayers.length === 0 ? (
-              <EmptyState>
-                <EmptyText>온라인 플레이어가 없습니다</EmptyText>
-              </EmptyState>
-            ) : (
-              onlinePlayers.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  isSelected={selectedPlayer?.id === player.id}
-                  isOnline={onlineUserIds.includes(player.id)}
-                  onClick={() => setSelectedPlayer(player)}
-                >
-                  <PlayerAvatar>
-                    <Image
-                      src={getProfileImagePath(
-                        player.profile_image || 'Nahida',
-                      )}
-                      alt={player.name}
-                      width={40}
-                      height={40}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <OnlineIndicator
-                      isOnline={onlineUserIds.includes(player.id)}
-                    />
-                  </PlayerAvatar>
-                  <PlayerInfo>
-                    <PlayerName>
-                      {player.name}
-                      {currentTurnPlayer?.id === player.id && (
-                        <TurnIndicator style={{ marginLeft: '8px' }}>
-                          턴
-                        </TurnIndicator>
-                      )}
-                    </PlayerName>
-                    <PlayerStatus>
-                      {player.board.filter(
-                        (item) => item !== null && item !== '',
-                      ).length === 25
-                        ? player.is_ready
-                          ? '준비 완료'
-                          : '보드 완성'
-                        : `보드 ${
-                            player.board.filter(
-                              (item) => item !== null && item !== '',
-                            ).length
-                          }/25`}
-                    </PlayerStatus>
-                  </PlayerInfo>
-                  <PlayerScore>{player.score}줄</PlayerScore>
-                </PlayerCard>
-              ))
-            )}
-          </PlayerList>
-        </PlayerListSection>
+        <Ranking isGameStarted={gameState?.is_started} isSpectator={true} />
       </MainContent>
 
       {/* 뽑은 이름 목록 */}

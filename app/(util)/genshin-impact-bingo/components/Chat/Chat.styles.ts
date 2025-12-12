@@ -95,6 +95,12 @@ export const MessageItem = styled('div', {
     isMe: {
       true: {},
     },
+    isRequest: {
+      true: {
+        backgroundColor: 'rgba(88, 101, 242, 0.15)',
+        border: '1px solid #5865F2',
+      },
+    },
   },
 });
 
@@ -104,10 +110,19 @@ export const MessageProfile = styled('div', {
     height: '32px',
     borderRadius: '50%',
     overflow: 'hidden',
+    border: '2px solid transparent',
+    boxSizing: 'border-box',
     flexShrink: 0,
     md: {
       width: '32px',
       height: '32px',
+    },
+  },
+  variants: {
+    isTyping: {
+      true: {
+        borderColor: '#3BA55C',
+      },
     },
   },
 });
@@ -142,6 +157,9 @@ export const MessageName = styled('span', {
 
 export const MessageText = styled('span', {
   base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
     fontSize: '14px',
     color: 'white',
     wordBreak: 'break-word',
@@ -187,6 +205,15 @@ export const InputSection = styled('div', {
   },
 });
 
+export const TypingIndicator = styled('div', {
+  base: {
+    minHeight: '16px',
+    fontSize: '12px',
+    color: '#B5BAC1',
+    paddingLeft: '2px',
+  },
+});
+
 export const ChatInput = styled('input', {
   base: {
     flex: 1,
@@ -199,6 +226,7 @@ export const ChatInput = styled('input', {
     outline: 'none',
     _focus: {
       borderColor: '#5865F2',
+      boxShadow: '0 0 0 2px rgba(88, 101, 242, 0.35)',
     },
     _placeholder: {
       color: '#72767D',
@@ -214,8 +242,85 @@ export const ButtonSection = styled('div', {
   base: {
     display: 'flex',
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: '8px',
+  },
+});
+
+export const RequestButtonGroup = styled('div', {
+  base: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '8px',
+    alignItems: 'center',
+  },
+});
+
+export const RequestButton = styled('button', {
+  base: {
+    padding: '8px 10px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(88, 101, 242, 0.25)',
+    border: '1px solid #5865F2',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap',
+    _hover: {
+      backgroundColor: 'rgba(88, 101, 242, 0.35)',
+    },
+    _disabled: {
+      opacity: 0.6,
+      cursor: 'not-allowed',
+    },
+    md: {
+      fontSize: '13px',
+      padding: '10px 12px',
+    },
+  },
+});
+
+export const RequestCharacterPanel = styled('div', {
+  base: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+    gap: '8px',
+    marginTop: '8px',
+    padding: '8px',
+    backgroundColor: '#1E1F22',
+    borderRadius: '8px',
+    width: '100%',
+  },
+});
+
+export const RequestCharacterItem = styled('button', {
+  base: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    padding: '6px',
+    backgroundColor: '#2B2D31',
+    borderRadius: '8px',
+    border: '1px solid transparent',
+    cursor: 'pointer',
+    width: '100%',
+    _hover: {
+      borderColor: '#5865F2',
+      backgroundColor: '#313338',
+    },
+  },
+});
+
+export const RequestCharacterLabel = styled('span', {
+  base: {
+    fontSize: '11px',
+    color: '#B5BAC1',
+    textAlign: 'center',
   },
 });
 
@@ -247,7 +352,7 @@ export const SendButton = styled('button', {
 
 export const BoastButton = styled('button', {
   base: {
-    padding: '10px 14px',
+    padding: '8px 10px',
     fontSize: '12px',
     fontWeight: 'bold',
     color: '#FFD700',
@@ -266,7 +371,7 @@ export const BoastButton = styled('button', {
     },
     md: {
       fontSize: '13px',
-      padding: '12px 16px',
+      padding: '10px 12px',
     },
   },
 });

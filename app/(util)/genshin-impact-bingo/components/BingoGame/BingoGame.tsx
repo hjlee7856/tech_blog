@@ -667,6 +667,9 @@ export function BingoGame({
         myScore={myPlayer?.score}
         myRank={myRank}
         isGameStarted={gameState?.is_started}
+        myBoard={localBoard}
+        characterNames={characterNames}
+        characterEnNames={characterEnNames}
       />
 
       {/* presence 디버그용 (개발 모드에서만 동작, UI에는 표시 X) */}

@@ -15,6 +15,23 @@ export const Backdrop = styled('div', {
   },
 });
 
+export const SpectatorButton = styled('button', {
+  base: {
+    padding: '12px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    backgroundColor: '#3F4147',
+    color: 'white',
+    border: '1px solid #5865F2',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    _hover: {
+      backgroundColor: '#4F545C',
+    },
+  },
+});
+
 export const Modal = styled('div', {
   base: {
     backgroundColor: '#2B2D31',

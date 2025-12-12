@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { login, register, type User } from '../../lib/auth';
 import {
@@ -10,6 +11,7 @@ import {
   InputGroup,
   Label,
   Modal,
+  SpectatorButton,
   SubmitButton,
   Title,
   ToggleButton,
@@ -20,6 +22,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ onLogin }: LoginModalProps) {
+  const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -105,6 +108,13 @@ export function LoginModal({ onLogin }: LoginModalProps) {
           <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? '처리 중...' : isRegister ? '가입하기' : '로그인'}
           </SubmitButton>
+
+          <SpectatorButton
+            type="button"
+            onClick={() => router.push('/genshin-impact-bingo/spectator')}
+          >
+            관전하기
+          </SpectatorButton>
         </Form>
 
         <ToggleButton type="button" onClick={toggleMode}>

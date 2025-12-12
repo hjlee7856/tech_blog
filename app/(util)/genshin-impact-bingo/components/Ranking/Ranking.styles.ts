@@ -14,6 +14,14 @@ export const Container = styled('div', {
       marginTop: '20px',
     },
   },
+  variants: {
+    isSpectator: {
+      true: {
+        width: '100%',
+        maxWidth: '100% !important',
+      },
+    },
+  },
 });
 
 export const Title = styled('h3', {
@@ -99,6 +107,16 @@ export const PlayerInfo = styled('div', {
   },
 });
 
+export const AvatarGroup = styled('div', {
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    flexWrap: 'wrap',
+    flexShrink: 0,
+  },
+});
+
 export const ProfileImage = styled('div', {
   base: {
     width: '20px',
@@ -117,6 +135,10 @@ export const PlayerName = styled('span', {
   base: {
     fontSize: '13px',
     flex: 1,
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
+    minWidth: 0,
     md: {
       fontSize: '14px',
     },
@@ -126,8 +148,11 @@ export const PlayerName = styled('span', {
 export const PlayerNameWrapper = styled('div', {
   base: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: '4px',
+    flex: 1,
+    minWidth: 0,
   },
 });
 

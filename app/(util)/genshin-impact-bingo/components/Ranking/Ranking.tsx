@@ -9,8 +9,8 @@ import {
   subscribeToOnlinePlayersRanking,
   type Player,
 } from '../../lib/game';
-import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
+  AvatarGroup,
   Container,
   ExpandButton,
   PlayerInfo,
@@ -60,12 +60,12 @@ function calculateRanks(players: Player[]): Map<number, number> {
 interface RankingProps {
   isGameStarted?: boolean;
   userId?: number;
+  isSpectator?: boolean;
 }
 
-export function Ranking({ isGameStarted, userId }: RankingProps) {
+export function Ranking({ isGameStarted, userId, isSpectator }: RankingProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { onlineUserIds } = useOnlineSnapshotUserIds({ userId });
 
   useEffect(() => {
     const init = async () => {
@@ -142,17 +142,9 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
   );
   const hasMorePlayers = players.length > totalDisplayedPlayers;
 
-  const onlineRankedPlayersCount = players.filter((player) =>
-    onlineUserIds.includes(player.id),
-  ).length;
-
   return (
-    <Container>
-      <Title>
-        실시간 순위
-        {onlineRankedPlayersCount > 0 &&
-          ` (온라인 ${onlineRankedPlayersCount}명)`}
-      </Title>
+    <Container isSpectator={isSpectator}>
+      <Title>실시간 순위</Title>
       <RankList>
         {displayGroups.map(([rank, groupPlayers]) => {
           // 공동 순위인 경우 (2명 이상)
@@ -162,26 +154,26 @@ export function Ranking({ isGameStarted, userId }: RankingProps) {
               .map((p) => (p.id === userId ? `${p.name} (나)` : p.name))
               .join(', ');
             const score = groupPlayers[0]?.score ?? 0;
-            // 내 프로필 이미지 찾기
-            const myPlayer = groupPlayers.find((p) => p.id === userId);
-            const profileImage =
-              myPlayer?.profile_image ||
-              groupPlayers[0]?.profile_image ||
-              'Nahida';
 
             return (
               <RankItem key={rank} rank={getRankVariant(rank)} isMe={hasMe}>
                 <RankNumber>{rank}위</RankNumber>
                 <PlayerInfo>
-                  <ProfileImage>
-                    <Image
-                      src={getProfileImagePath(profileImage)}
-                      alt={names}
-                      width={24}
-                      height={24}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                  </ProfileImage>
+                  <AvatarGroup>
+                    {groupPlayers.map((player) => (
+                      <ProfileImage key={player.id}>
+                        <Image
+                          src={getProfileImagePath(
+                            player.profile_image || 'Nahida',
+                          )}
+                          alt={player.name}
+                          width={24}
+                          height={24}
+                          style={{ borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                      </ProfileImage>
+                    ))}
+                  </AvatarGroup>
                   <PlayerNameWrapper>
                     <PlayerName>{names}</PlayerName>
                     {!isGameStarted && groupPlayers.some((p) => p.is_ready) && (

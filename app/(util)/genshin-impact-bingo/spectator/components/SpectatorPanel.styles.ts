@@ -494,7 +494,7 @@ export const CellName = styled('span', {
   },
 });
 
-export const TurnIndicator = styled('div', {
+export const TurnIndicator = styled('span', {
   base: {
     display: 'inline-flex',
     alignItems: 'center',

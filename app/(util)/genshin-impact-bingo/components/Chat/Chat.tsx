@@ -3,12 +3,14 @@
 import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getProfileImagePath } from '../../lib/auth';
+import { createNameMap } from '../../lib/characterUtils';
 import {
+  parseRequestMessage,
   sendChatMessage,
+  sendRequestChatMessage,
   subscribeToChatMessages,
   type ChatMessage,
 } from '../../lib/game';
-import { useOnlineSnapshotUserIds } from '../BingoGame/hooks';
 import {
   BoastBadge,
   BoastButton,
@@ -25,12 +27,17 @@ import {
   MessageProfile,
   MessageText,
   MessageTime,
-  OnlineDot,
+  RequestButton,
+  RequestButtonGroup,
+  RequestCharacterItem,
+  RequestCharacterLabel,
+  RequestCharacterPanel,
   SendButton,
   Title,
+  TypingIndicator,
 } from './Chat.styles';
+import { useChatPresence } from './useChatPresence';
 
-// 시간 포맷 함수
 function formatTime(dateString: string): string {
   const date = new Date(dateString);
   const year = date.getFullYear();
@@ -43,28 +50,37 @@ function formatTime(dateString: string): string {
   return `${year}-${month}-${day} ${period} ${displayHours}:${minutes}`;
 }
 
-// 메모이제이션된 메시지 아이템
 interface ChatMessageItemProps {
   msg: ChatMessage;
   isMe: boolean;
-  isOnline: boolean;
+  isTyping: boolean;
 }
 
 const ChatMessageItem = memo(function ChatMessageItem({
   msg,
   isMe,
-  isOnline,
+  isTyping,
 }: ChatMessageItemProps) {
   const formattedTime = useMemo(
     () => formatTime(msg.created_at),
     [msg.created_at],
   );
 
+  const parsed = useMemo(() => parseRequestMessage(msg.message), [msg.message]);
+
+  const profileImageKey = msg.profile_image || 'Arama';
+
+  const displayMessage = parsed.isRequest ? parsed.text : msg.message;
+
   return (
-    <MessageItem isBoast={msg.is_boast} isMe={isMe}>
-      <MessageProfile>
+    <MessageItem
+      isBoast={msg.is_boast}
+      isMe={isMe}
+      isRequest={parsed.isRequest}
+    >
+      <MessageProfile isTyping={isTyping}>
         <Image
-          src={getProfileImagePath(msg.profile_image || 'Arama')}
+          src={getProfileImagePath(profileImageKey)}
           alt={msg.user_name}
           width={32}
           height={32}
@@ -74,14 +90,24 @@ const ChatMessageItem = memo(function ChatMessageItem({
       <MessageContent>
         <MessageHeaderContainer>
           <MessageName>
-            <OnlineDot isOnline={isOnline} />
             {msg.user_name}
             {isMe && '(나)'}
             {msg.is_boast && msg.rank && <BoastBadge>{msg.rank}위</BoastBadge>}
           </MessageName>
           <MessageTime>{formattedTime}</MessageTime>
         </MessageHeaderContainer>
-        <MessageText>{msg.message}</MessageText>
+        <MessageText>
+          {parsed.isRequest && parsed.characterKey && (
+            <Image
+              src={getProfileImagePath(parsed.characterKey)}
+              alt={parsed.characterKey}
+              width={20}
+              height={20}
+              style={{ borderRadius: '50%', objectFit: 'cover' }}
+            />
+          )}
+          {displayMessage}
+        </MessageText>
       </MessageContent>
     </MessageItem>
   );
@@ -91,9 +117,12 @@ interface ChatProps {
   userId?: number;
   userName?: string;
   profileImage?: string;
-  myScore?: number; // 빙고 줄 수
-  myRank?: number; // 순위
+  myScore?: number;
+  myRank?: number;
   isGameStarted?: boolean;
+  myBoard?: (string | null)[];
+  characterNames?: string[];
+  characterEnNames?: string[];
 }
 
 export function Chat({
@@ -103,15 +132,39 @@ export function Chat({
   myScore,
   myRank,
   isGameStarted,
+  myBoard,
+  characterNames,
+  characterEnNames,
 }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isRequestPanelOpen, setIsRequestPanelOpen] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
-  const { onlineUserIds: snapshotOnlineUserIds } = useOnlineSnapshotUserIds();
 
-  // 3위권 + 1빙고 이상일 때만 자랑 가능
+  const { typingUsers, typingText, onLocalInputActivity } = useChatPresence({
+    userId,
+    userName,
+  });
+
+  const nameMap = useMemo(() => {
+    if (!characterNames || !characterEnNames) return new Map<string, string>();
+    return createNameMap(characterNames, characterEnNames);
+  }, [characterNames, characterEnNames]);
+
+  const myBoardCharacterNames = useMemo(() => {
+    if (!myBoard) return [];
+
+    const unique = new Set<string>();
+    for (const name of myBoard) {
+      if (!name) continue;
+      if (!name.trim()) continue;
+      unique.add(name);
+    }
+    return [...unique];
+  }, [myBoard]);
+
   const canBoast = useMemo(
     () =>
       isGameStarted &&
@@ -124,11 +177,9 @@ export function Chat({
 
   useEffect(() => {
     const subscription = subscribeToChatMessages(
-      // 초기 로드
       (initialMessages) => {
         setMessages(initialMessages);
       },
-      // 새 메시지 추가
       (newMessage) => {
         setMessages((prev) => [...prev, newMessage]);
       },
@@ -138,8 +189,6 @@ export function Chat({
       void subscription.unsubscribe();
     };
   }, []);
-
-  // 새 메시지가 추가될 때만 스크롤
   useEffect(() => {
     if (
       messages.length > prevMessageCountRef.current &&
@@ -162,6 +211,7 @@ export function Chat({
     );
     setInputValue('');
     setIsSending(false);
+    setIsRequestPanelOpen(false);
   }, [userId, userName, profileImage, inputValue, isSending]);
 
   const handleBoast = useCallback(async () => {
@@ -182,6 +232,34 @@ export function Chat({
     setIsSending(false);
   }, [userId, userName, profileImage, canBoast, isSending, myScore, myRank]);
 
+  const handleToggleRequestPanel = useCallback(() => {
+    if (!userId || !userName) return;
+    if (!isGameStarted) return;
+    setIsRequestPanelOpen((prev) => !prev);
+  }, [userId, userName, isGameStarted]);
+
+  const handleSendRequest = useCallback(
+    async ({ characterName }: { characterName: string }) => {
+      if (!userId || !userName || isSending) return;
+
+      const characterKey = nameMap.get(characterName) ?? 'Aino';
+      const requestText = `${characterName} 뽑아주세요 🙏`;
+
+      setIsSending(true);
+      await sendRequestChatMessage({
+        userId,
+        userName,
+        profileImage: profileImage || 'Arama',
+        characterKey,
+        text: requestText,
+      });
+      setInputValue('');
+      setIsSending(false);
+      setIsRequestPanelOpen(false);
+    },
+    [userId, userName, profileImage, isSending, nameMap],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -195,8 +273,10 @@ export function Chat({
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInputValue(e.target.value);
+
+      onLocalInputActivity();
     },
-    [],
+    [onLocalInputActivity],
   );
 
   return (
@@ -211,13 +291,14 @@ export function Chat({
               key={msg.id}
               msg={msg}
               isMe={msg.user_id === userId}
-              isOnline={snapshotOnlineUserIds.includes(msg.user_id)}
+              isTyping={typingUsers.some((u) => u.id === msg.user_id)}
             />
           ))
         )}
       </MessageList>
       {userId && (
         <InputSection>
+          <TypingIndicator>{typingText}</TypingIndicator>
           <ChatInput
             type="text"
             placeholder="메시지를 입력하세요..."
@@ -227,14 +308,25 @@ export function Chat({
             disabled={isSending}
           />
           <ButtonSection>
-            {canBoast && (
-              <BoastButton
-                onClick={() => void handleBoast()}
-                disabled={isSending}
-              >
-                🎉 자랑하기
-              </BoastButton>
-            )}
+            <RequestButtonGroup>
+              {isGameStarted && (
+                <RequestButton
+                  type="button"
+                  onClick={handleToggleRequestPanel}
+                  disabled={isSending}
+                >
+                  요청하기
+                </RequestButton>
+              )}
+              {canBoast && (
+                <BoastButton
+                  onClick={() => void handleBoast()}
+                  disabled={isSending}
+                >
+                  자랑하기
+                </BoastButton>
+              )}
+            </RequestButtonGroup>
             <SendButton
               onClick={() => void handleSend()}
               disabled={isSending || !inputValue.trim()}
@@ -242,6 +334,36 @@ export function Chat({
               전송
             </SendButton>
           </ButtonSection>
+          {isGameStarted && isRequestPanelOpen && (
+            <RequestCharacterPanel>
+              {myBoardCharacterNames.length === 0 && (
+                <RequestCharacterLabel>
+                  보드에 캐릭터가 없어서 요청할 수 없습니다
+                </RequestCharacterLabel>
+              )}
+              {myBoardCharacterNames.map((characterName) => {
+                const characterKey = nameMap.get(characterName) ?? 'Aino';
+                return (
+                  <RequestCharacterItem
+                    key={characterName}
+                    type="button"
+                    onClick={() => void handleSendRequest({ characterName })}
+                  >
+                    <Image
+                      src={getProfileImagePath(characterKey)}
+                      alt={characterName}
+                      width={40}
+                      height={40}
+                      style={{ borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <RequestCharacterLabel>
+                      {characterName}
+                    </RequestCharacterLabel>
+                  </RequestCharacterItem>
+                );
+              })}
+            </RequestCharacterPanel>
+          )}
         </InputSection>
       )}
     </Container>
