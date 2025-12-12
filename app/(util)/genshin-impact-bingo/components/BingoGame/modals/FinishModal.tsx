@@ -8,6 +8,7 @@ import {
   subscribeToGameState,
   type Player,
 } from '../../../lib/game';
+import { getRankAtIndex } from '../../../lib/ranking';
 import {
   ConfirmDialog,
   ConfirmDialogButtons,
@@ -30,32 +31,6 @@ interface FinishModalProps {
   userId: number;
   isAdmin: boolean;
   onReset: () => void;
-}
-
-// 25칸 완성자 우선, 그 다음 score 기준 순위 계산
-function getRank(index: number, players: Player[]): number {
-  if (index === 0) return 1;
-  const prevPlayer = players[index - 1];
-  const currentPlayer = players[index];
-  if (!prevPlayer || !currentPlayer) return index + 1;
-
-  const prevValidCount = prevPlayer.board.filter(
-    (item) => item && item !== '',
-  ).length;
-  const currValidCount = currentPlayer.board.filter(
-    (item) => item && item !== '',
-  ).length;
-  const prevComplete = prevValidCount === 25 && prevPlayer.score === 12;
-  const currentComplete = currValidCount === 25 && currentPlayer.score === 12;
-
-  // 완성 상태와 점수가 같으면 동일 순위
-  if (
-    prevComplete === currentComplete &&
-    prevPlayer.score === currentPlayer.score
-  ) {
-    return getRank(index - 1, players);
-  }
-  return index + 1;
 }
 
 type ConfirmAction = 'restart' | null;
@@ -89,12 +64,22 @@ export function FinishModal({
   if (!isOpen) return null;
 
   const topPlayers = finalRanking.filter((_, index) => {
-    const rank = getRank(index, finalRanking);
+    const rank = getRankAtIndex({ index, players: finalRanking });
     return rank <= 3;
   });
-  const isWinner = finalRanking[0]?.id === userId;
+
   const myIndex = finalRanking.findIndex((p) => p.id === userId);
-  const myRank = myIndex !== -1 ? getRank(myIndex, finalRanking) : null;
+  const myRank =
+    myIndex !== -1
+      ? getRankAtIndex({ index: myIndex, players: finalRanking })
+      : null;
+
+  const isWinner = myRank === 1;
+  const firstRankNames = finalRanking
+    .filter(
+      (_, index) => getRankAtIndex({ index, players: finalRanking }) === 1,
+    )
+    .map((p) => p.name);
 
   const handleRestart = async () => {
     setIsProcessing(true);
@@ -139,13 +124,21 @@ export function FinishModal({
     <ModalOverlay>
       <ModalContent>
         <ModalTitle>게임 종료!</ModalTitle>
-        {isWinner && <WinnerName>축하합니다! 우승하셨습니다!</WinnerName>}
+        {firstRankNames.length > 1 && (
+          <WinnerName>{`공동 1등: ${firstRankNames.join(', ')}`}</WinnerName>
+        )}
+        {firstRankNames.length === 1 && isWinner && (
+          <WinnerName>축하합니다! 우승하셨습니다!</WinnerName>
+        )}
         <RankingList>
           {topPlayers.map((player) => {
             const playerIndex = finalRanking.findIndex(
               (p) => p.id === player.id,
             );
-            const rank = getRank(playerIndex, finalRanking);
+            const rank = getRankAtIndex({
+              index: playerIndex,
+              players: finalRanking,
+            });
             return (
               <RankingItem
                 key={player.id}

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createNameMap } from '../../lib/characterUtils';
 import {
   BINGO_LINES,
@@ -34,6 +34,190 @@ export interface BingoBoardActions {
   fillRandom: () => void;
   clearAll: () => void;
 }
+
+interface BingoBoardCellProps {
+  index: number;
+  name: string | null;
+  canEditBoard: boolean;
+  isDrawing: boolean;
+  selectedForDraw: string | null;
+  isMatched: boolean;
+  isInBingoLine: boolean;
+  isAllMatched: boolean;
+  canSelectForDraw: boolean;
+  getImagePath: (koreanName: string) => string;
+  onEditCell: (index: number) => void;
+  onSelectForDrawCell: (name: string) => void;
+  onUnselectDraw: () => void;
+}
+
+const BingoBoardCell = memo(function BingoBoardCell({
+  index,
+  name,
+  canEditBoard,
+  isDrawing,
+  selectedForDraw,
+  isMatched,
+  isInBingoLine,
+  isAllMatched,
+  canSelectForDraw,
+  getImagePath,
+  onEditCell,
+  onSelectForDrawCell,
+  onUnselectDraw,
+}: BingoBoardCellProps) {
+  if (canEditBoard) {
+    return (
+      <Cell
+        key={index}
+        onClick={() => onEditCell(index)}
+        style={{ cursor: 'pointer' }}
+      >
+        {name ? (
+          <>
+            <CellImage>
+              <Image
+                src={getImagePath(name)}
+                alt={name}
+                width={48}
+                height={48}
+                style={{ objectFit: 'cover' }}
+              />
+            </CellImage>
+            <CellName>{name}</CellName>
+          </>
+        ) : (
+          ''
+        )}
+      </Cell>
+    );
+  }
+
+  if (selectedForDraw === name && name) {
+    return (
+      <SelectedForDrawCell
+        key={index}
+        onClick={
+          isDrawing
+            ? undefined
+            : () => {
+                onUnselectDraw();
+              }
+        }
+      >
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      </SelectedForDrawCell>
+    );
+  }
+
+  if (isAllMatched && isMatched && name) {
+    return (
+      <AllMatchedCell key={index}>
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      </AllMatchedCell>
+    );
+  }
+
+  if (isMatched && isInBingoLine && name) {
+    return (
+      <BingoLineCell key={index}>
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      </BingoLineCell>
+    );
+  }
+
+  if (isMatched && name) {
+    return (
+      <MatchedCell key={index}>
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      </MatchedCell>
+    );
+  }
+
+  if (canSelectForDraw && name) {
+    return (
+      <SelectableCell key={index} onClick={() => onSelectForDrawCell(name)}>
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      </SelectableCell>
+    );
+  }
+
+  return (
+    <Cell key={index}>
+      {name ? (
+        <>
+          <CellImage>
+            <Image
+              src={getImagePath(name)}
+              alt={name}
+              width={48}
+              height={48}
+              style={{ objectFit: 'cover' }}
+            />
+          </CellImage>
+          <CellName>{name}</CellName>
+        </>
+      ) : (
+        ''
+      )}
+    </Cell>
+  );
+});
 
 interface BingoBoardProps {
   characterNames: string[];
@@ -264,6 +448,8 @@ export function BingoBoard({
     [nameMap],
   );
 
+  const drawnNameSet = useMemo(() => new Set(drawnNames), [drawnNames]);
+
   const usedNames = new Set(
     board.filter((name): name is string => name !== null),
   );
@@ -274,15 +460,6 @@ export function BingoBoard({
     !isGameStarted ||
     playerOrder === 0 ||
     board.filter((name) => name !== null).length < 25;
-
-  const handleCellClick = useCallback(
-    (index: number) => {
-      if (!canEditBoard) return;
-      setSelectedCell(index);
-      setIsModalOpen(true);
-    },
-    [canEditBoard],
-  );
 
   const handleSelectCharacter = useCallback(
     (name: string) => {
@@ -353,22 +530,22 @@ export function BingoBoard({
     for (const line of BINGO_LINES) {
       const isLineComplete = line.every((idx) => {
         const name = board[idx];
-        return name !== null && name !== undefined && drawnNames.includes(name);
+        return name !== null && name !== undefined && drawnNameSet.has(name);
       });
       if (isLineComplete) {
         for (const idx of line) cells.add(idx);
       }
     }
     return cells;
-  }, [board, drawnNames, playerOrder]);
+  }, [board, drawnNameSet, playerOrder]);
 
   const isMatched = useCallback(
     (name: string | null) => {
       // 게임에 아직 참여하지 않은 상태(order === 0)에서는 매칭 하이라이트를 표시하지 않음
       if (playerOrder === 0) return false;
-      return name !== null && drawnNames.includes(name);
+      return name !== null && drawnNameSet.has(name);
     },
-    [drawnNames, playerOrder],
+    [drawnNameSet, playerOrder],
   );
 
   const isInBingoLine = (index: number) => bingoLineCells.has(index);
@@ -380,193 +557,61 @@ export function BingoBoard({
 
     const filledCells = board.filter((n) => n !== null);
     if (filledCells.length !== 25) return false;
-    return filledCells.every((name) => drawnNames.includes(name as string));
-  }, [board, drawnNames, playerOrder]);
+    return filledCells.every((name) => drawnNameSet.has(name as string));
+  }, [board, drawnNameSet, playerOrder]);
+
+  const handleEditCell = useCallback(
+    (index: number) => {
+      if (!canEditBoard) return;
+      setSelectedCell(index);
+      setIsModalOpen(true);
+    },
+    [canEditBoard],
+  );
+
+  const handleSelectForDrawCell = useCallback((name: string) => {
+    setSelectedForDraw(name);
+  }, []);
+
+  const handleUnselectDraw = useCallback(() => {
+    setSelectedForDraw(null);
+  }, []);
+
+  const handleConfirmDraw = useCallback(
+    (name: string) => {
+      if (!onSelectForDraw || isDrawing) return;
+      onSelectForDraw(name);
+      setSelectedForDraw(null);
+    },
+    [isDrawing, onSelectForDraw],
+  );
 
   return (
     <Container>
       <Board>
         {board.map((name, index) => {
-          // 보드 편집 가능 단계에서는 매칭/빙고 하이라이트를 적용하지 않고
-          // 항상 일반 셀로 렌더링하여 캐릭터 선택 모달을 열 수 있게 한다.
-          if (canEditBoard) {
-            return (
-              <Cell
-                key={index}
-                onClick={() => handleCellClick(index)}
-                style={{ cursor: 'pointer' }}
-              >
-                {name ? (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                ) : (
-                  ''
-                )}
-              </Cell>
-            );
-          }
-
           const matched = isMatched(name);
           const inBingoLine = isInBingoLine(index);
-
-          // 모든 셀이 매칭되었을 때 (빨간색 네온)
-          if (isAllMatched && matched) {
-            return (
-              <AllMatchedCell key={index}>
-                {name && (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                )}
-              </AllMatchedCell>
-            );
-          }
-
-          // 빙고 줄에 포함된 셀 (금색)
-          if (matched && inBingoLine) {
-            return (
-              <BingoLineCell key={index}>
-                {name && (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                )}
-              </BingoLineCell>
-            );
-          }
-
-          // 매칭된 셀 (초록색)
-          if (matched) {
-            return (
-              <MatchedCell key={index}>
-                {name && (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                )}
-              </MatchedCell>
-            );
-          }
-
-          // 내 턴이고 아직 뽑히지 않은 셀 - 선택 가능
-          // 이름 뽑기 중(isDrawing)에는 새로운 선택을 막기 위해 !isDrawing 조건을 포함
           const canSelectForDraw =
-            isMyTurn && !isDrawing && name && !drawnNames.includes(name);
+            isMyTurn && !isDrawing && !!name && !drawnNameSet.has(name);
 
-          // 이미 선택된 셀은 이름 뽑기 중(isDrawing)에도 하이라이트 유지
-          if (selectedForDraw === name) {
-            return (
-              <SelectedForDrawCell
-                key={index}
-                // 뽑기 진행 중에는 선택 해제 불가
-                onClick={
-                  isDrawing
-                    ? undefined
-                    : () => {
-                        setSelectedForDraw(null);
-                      }
-                }
-              >
-                {name && (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                )}
-              </SelectedForDrawCell>
-            );
-          }
-
-          // 선택 가능한 셀
-          if (canSelectForDraw) {
-            return (
-              <SelectableCell
-                key={index}
-                onClick={() => setSelectedForDraw(name)}
-              >
-                {name && (
-                  <>
-                    <CellImage>
-                      <Image
-                        src={getImagePath(name)}
-                        alt={name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    </CellImage>
-                    <CellName>{name}</CellName>
-                  </>
-                )}
-              </SelectableCell>
-            );
-          }
-
-          // 일반 셀 (게임 진행 중, 편집 불가 단계)
           return (
-            <Cell key={index}>
-              {name ? (
-                <>
-                  <CellImage>
-                    <Image
-                      src={getImagePath(name)}
-                      alt={name}
-                      width={48}
-                      height={48}
-                      style={{ objectFit: 'cover' }}
-                    />
-                  </CellImage>
-                  <CellName>{name}</CellName>
-                </>
-              ) : (
-                ''
-              )}
-            </Cell>
+            <BingoBoardCell
+              key={index}
+              index={index}
+              name={name}
+              canEditBoard={canEditBoard}
+              isDrawing={isDrawing}
+              selectedForDraw={selectedForDraw}
+              isMatched={matched}
+              isInBingoLine={inBingoLine}
+              isAllMatched={isAllMatched}
+              canSelectForDraw={canSelectForDraw}
+              getImagePath={getImagePath}
+              onEditCell={handleEditCell}
+              onSelectForDrawCell={handleSelectForDrawCell}
+              onUnselectDraw={handleUnselectDraw}
+            />
           );
         })}
       </Board>
@@ -583,10 +628,7 @@ export function BingoBoard({
             <DrawConfirmButtons>
               <ConfirmButton
                 onClick={() => {
-                  if (onSelectForDraw && !isDrawing) {
-                    onSelectForDraw(selectedForDraw);
-                    setSelectedForDraw(null);
-                  }
+                  handleConfirmDraw(selectedForDraw);
                 }}
                 disabled={isDrawing}
               >

@@ -7,6 +7,7 @@ export interface GameState {
   is_started: boolean;
   is_finished: boolean;
   winner_id: number | null;
+  winner_ids?: number[] | null;
   current_order: number;
   drawn_names: string[];
   created_at: string;
@@ -16,6 +17,77 @@ export interface GameState {
   start_requested_at: string | null; // 시작 요청 시간
   // 턴 제한시간 관련
   turn_started_at: string | null; // 현재 턴 시작 시간
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => typeof item === 'string')
+      .map((item) => item.replaceAll('\n', '').trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .replaceAll('\n', '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  return [];
+}
+
+function toPostgresTextArrayLiteral(values: string[]): string {
+  const escaped = values.map((value) =>
+    value.replaceAll('\\', '\\\\').replaceAll('"', '\\"'),
+  );
+  return `{${escaped.map((value) => `"${value}"`).join(',')}}`;
+}
+
+export async function selectDrawName({
+  selectedName,
+  expectedDrawnNames,
+  expectedCurrentOrder,
+}: {
+  selectedName: string;
+  expectedDrawnNames: string[];
+  expectedCurrentOrder: number;
+}): Promise<{ success: boolean; newDrawnNames?: string[]; error?: string }> {
+  if (!selectedName.trim()) {
+    return { success: false, error: '잘못된 선택입니다.' };
+  }
+
+  const resolvedExpectedDrawnNames = normalizeStringArray(expectedDrawnNames);
+  const resolvedSelectedName = selectedName.replaceAll('\n', '').trim();
+
+  if (resolvedExpectedDrawnNames.includes(resolvedSelectedName)) {
+    return { success: false, error: '이미 뽑힌 이름입니다.' };
+  }
+
+  const newDrawnNames = [...resolvedExpectedDrawnNames, resolvedSelectedName];
+
+  const { error, data } = await supabase
+    .from('genshin-bingo-game-state')
+    .update({
+      drawn_names: newDrawnNames,
+    })
+    .eq('id', GAME_STATE_ID)
+    .eq('current_order', expectedCurrentOrder)
+    .eq('drawn_names', toPostgresTextArrayLiteral(resolvedExpectedDrawnNames))
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    return {
+      success: false,
+      error:
+        error?.message ??
+        '다른 플레이어가 먼저 뽑았거나 턴이 변경되었습니다. 다시 시도해 주세요.',
+    };
+  }
+
+  return { success: true, newDrawnNames };
 }
 
 // 시작 요청 타임아웃 (60초)
@@ -88,7 +160,8 @@ export async function startGame(forceStart = false): Promise<{
   const eligiblePlayers = players.filter(
     (p) =>
       p.board.filter((item) => item !== null && item !== '').length === 25 &&
-      p.is_ready,
+      p.is_ready &&
+      isWithinLastSeenGrace(p.last_seen),
   );
 
   if (eligiblePlayers.length === 0) {
@@ -141,6 +214,7 @@ export async function startGame(forceStart = false): Promise<{
       is_started: true,
       is_finished: false,
       winner_id: null,
+      winner_ids: [],
       current_order: firstOrder,
       drawn_names: [],
       start_requested_by: null,
@@ -169,6 +243,7 @@ export async function resetGame(): Promise<boolean> {
       is_started: false,
       is_finished: false,
       winner_id: null,
+      winner_ids: [],
       current_order: 0,
       drawn_names: [],
       start_requested_by: null,
@@ -194,7 +269,10 @@ export async function drawName(
   characterNames: string[],
   drawnNames: string[],
 ): Promise<{ success: boolean; name?: string; error?: string }> {
-  const availableNames = characterNames.filter((n) => !drawnNames.includes(n));
+  const resolvedDrawnNames = normalizeStringArray(drawnNames);
+  const availableNames = characterNames.filter(
+    (name) => !resolvedDrawnNames.includes(name),
+  );
 
   if (availableNames.length === 0) {
     return { success: false, error: '더 이상 뽑을 캐릭터가 없습니다.' };
@@ -203,13 +281,13 @@ export async function drawName(
   const randomIndex = Math.floor(Math.random() * availableNames.length);
   const drawnName = availableNames[randomIndex];
 
-  const newDrawnNames = [...drawnNames, drawnName];
+  const newDrawnNames = [...resolvedDrawnNames, drawnName];
 
   const { error, data } = await supabase
     .from('genshin-bingo-game-state')
     .update({ drawn_names: newDrawnNames })
     .eq('id', GAME_STATE_ID)
-    .eq('drawn_names', drawnNames)
+    .eq('drawn_names', toPostgresTextArrayLiteral(resolvedDrawnNames))
     .select('id')
     .single();
 
@@ -685,13 +763,20 @@ export async function updateOnlineStatus(
 }
 
 // 게임 종료 처리
-export async function finishGame(winnerId: number): Promise<boolean> {
+export async function finishGame(
+  winnerId: number,
+  winnerIds?: number[],
+): Promise<boolean> {
+  const resolvedWinnerIds =
+    winnerIds && winnerIds.length > 0 ? winnerIds : [winnerId];
+
   const { error: stateError } = await supabase
     .from('genshin-bingo-game-state')
     .update({
       is_started: false,
       is_finished: true,
       winner_id: winnerId,
+      winner_ids: resolvedWinnerIds,
     })
     .eq('id', GAME_STATE_ID);
 
@@ -731,7 +816,7 @@ export function checkFullBingo(board: string[], drawnNames: string[]): boolean {
 // 동시에 완성한 경우 공동 1등 처리
 export async function checkGameFinish(
   drawnNames: string[],
-): Promise<{ finished: boolean; winnerId?: number }> {
+): Promise<{ finished: boolean; winnerId?: number; winnerIds?: number[] }> {
   const players = await getAllPlayers();
 
   // 게임 참여 중인 플레이어만 체크 (order > 0)
@@ -762,8 +847,8 @@ export async function checkGameFinish(
       // 게임 종료 시점에는 모든 참여 플레이어의 점수가 최신 상태여야 하므로
       // 한 번 더 전체 점수 재계산을 수행한 뒤 게임을 종료한다.
       await checkAndUpdateAllScores(drawnNames);
-      await finishGame(winnerId);
-      return { finished: true, winnerId };
+      await finishGame(winnerId, winners);
+      return { finished: true, winnerId, winnerIds: winners };
     }
   }
 
@@ -1055,35 +1140,35 @@ export function buildRequestMessage({
   characterKey,
   text,
 }: {
-  characterKey: string
-  text: string
+  characterKey: string;
+  text: string;
 }): string {
-  if (!text.trim()) return ''
-  return `${REQUEST_MESSAGE_PREFIX}${characterKey}::${text.trim()}`
+  if (!text.trim()) return '';
+  return `${REQUEST_MESSAGE_PREFIX}${characterKey}::${text.trim()}`;
 }
 
 export function parseRequestMessage(message: string): {
-  isRequest: boolean
-  characterKey?: string
-  text: string
+  isRequest: boolean;
+  characterKey?: string;
+  text: string;
 } {
   if (!message.startsWith(REQUEST_MESSAGE_PREFIX)) {
-    return { isRequest: false, text: message }
+    return { isRequest: false, text: message };
   }
 
-  const withoutPrefix = message.slice(REQUEST_MESSAGE_PREFIX.length)
-  const [characterKey, ...rest] = withoutPrefix.split('::')
-  const text = rest.join('::') || ''
+  const withoutPrefix = message.slice(REQUEST_MESSAGE_PREFIX.length);
+  const [characterKey, ...rest] = withoutPrefix.split('::');
+  const text = rest.join('::') || '';
 
   if (!characterKey || !text.trim()) {
-    return { isRequest: false, text: message }
+    return { isRequest: false, text: message };
   }
 
   return {
     isRequest: true,
     characterKey,
     text,
-  }
+  };
 }
 
 export async function sendRequestChatMessage({
@@ -1093,16 +1178,16 @@ export async function sendRequestChatMessage({
   characterKey,
   text,
 }: {
-  userId: number
-  userName: string
-  profileImage: string
-  characterKey: string
-  text: string
+  userId: number;
+  userName: string;
+  profileImage: string;
+  characterKey: string;
+  text: string;
 }): Promise<boolean> {
-  const encoded = buildRequestMessage({ characterKey, text })
-  if (!encoded) return false
+  const encoded = buildRequestMessage({ characterKey, text });
+  if (!encoded) return false;
 
-  return sendChatMessage(userId, userName, profileImage, encoded)
+  return sendChatMessage(userId, userName, profileImage, encoded);
 }
 
 // 채팅 메시지 조회 (최근 50개)

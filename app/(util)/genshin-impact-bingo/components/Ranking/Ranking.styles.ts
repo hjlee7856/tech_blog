@@ -117,6 +117,35 @@ export const AvatarGroup = styled('div', {
   },
 });
 
+export const AvatarStack = styled('div', {
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0px',
+    flexShrink: 0,
+  },
+});
+
+export const AvatarStackItem = styled('div', {
+  base: {
+    width: '20px',
+    height: '20px',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    flexShrink: 0,
+    border: '2px solid rgba(0, 0, 0, 0.25)',
+    boxSizing: 'border-box',
+    marginLeft: '-6px',
+    _first: {
+      marginLeft: '0px',
+    },
+    md: {
+      width: '24px',
+      height: '24px',
+    },
+  },
+});
+
 export const ProfileImage = styled('div', {
   base: {
     width: '20px',

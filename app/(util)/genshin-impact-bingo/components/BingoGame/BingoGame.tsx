@@ -1,6 +1,4 @@
 'use client';
-
-import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +18,7 @@ import {
   nextTurn,
   OFFLINE_GRACE_MS,
   resetGame,
+  selectDrawName,
   startGame,
   toggleReady,
   type Player,
@@ -59,6 +58,10 @@ import {
   UserName,
 } from './BingoGame.styles';
 
+import {
+  calculateRankMap,
+  sortPlayersByCompleteThenScore,
+} from '../../lib/ranking';
 import {
   playBingoSound,
   playGameFinishSound,
@@ -278,63 +281,63 @@ export function BingoGame({
   }, [user, setPlayers]);
 
   // 선택해서 뽑기
-  const handleSelectDraw = async (selectedName: string) => {
-    if (!gameState || isDrawing) return;
+  const handleSelectDraw = useCallback(
+    async (selectedName: string) => {
+      if (!gameState || isDrawing) return;
 
-    setIsDrawing(true);
-    playSelectSound(); // 선택 효과음
+      setIsDrawing(true);
+      playSelectSound(); // 선택 효과음
 
-    // 항상 최신 gameState를 기준으로 업데이트
-    const latestState = await getGameState();
+      // 항상 최신 gameState를 기준으로 업데이트
+      const latestState = await getGameState();
 
-    if (!latestState) {
-      alert('이름 뽑기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-      setIsDrawing(false);
-      return;
-    }
+      if (!latestState) {
+        alert('이름 뽑기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        setIsDrawing(false);
+        return;
+      }
 
-    // 이미 다른 플레이어가 해당 이름을 뽑은 경우라면 조용히 종료
-    if (latestState.drawn_names.includes(selectedName)) {
-      setIsDrawing(false);
-      return;
-    }
+      // 이미 다른 플레이어가 해당 이름을 뽑은 경우라면 조용히 종료
+      if (latestState.drawn_names.includes(selectedName)) {
+        setIsDrawing(false);
+        return;
+      }
 
-    const newDrawnNames = [...latestState.drawn_names, selectedName];
+      const selectResult = await selectDrawName({
+        selectedName,
+        expectedDrawnNames: latestState.drawn_names,
+        expectedCurrentOrder: latestState.current_order,
+      });
 
-    const { error, data } = await supabase
-      .from('genshin-bingo-game-state')
-      .update({
-        drawn_names: newDrawnNames,
-      })
-      .eq('id', 1)
-      .select('id')
-      .single();
+      if (!selectResult.success || !selectResult.newDrawnNames) {
+        if (selectResult.error) alert(selectResult.error);
+        setIsDrawing(false);
+        return;
+      }
 
-    if (error || !data) {
-      alert('이름 뽑기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-      setIsDrawing(false);
-      return;
-    }
+      const newDrawnNames = selectResult.newDrawnNames;
 
-    // 게임 종료 체크
-    const finishResult = await checkGameFinish(newDrawnNames);
-    if (finishResult.finished) {
-      // 우승자 확정 시에도 점수를 최신 상태로 반영 (예: 12줄 빙고)
+      // 게임 종료 체크
+      const finishResult = await checkGameFinish(newDrawnNames);
+      if (finishResult.finished) {
+        // 우승자 확정 시에도 점수를 최신 상태로 반영 (예: 12줄 빙고)
+        await checkAndUpdateAllScores(newDrawnNames);
+        const ranking = await getOnlinePlayersRanking();
+        setFinalRanking(ranking);
+        setShowFinishModal(true);
+        setIsDrawing(false);
+        return;
+      }
+
       await checkAndUpdateAllScores(newDrawnNames);
-      const ranking = await getOnlinePlayersRanking();
-      setFinalRanking(ranking);
-      setShowFinishModal(true);
-      setIsDrawing(false);
-      return;
-    }
 
-    await checkAndUpdateAllScores(newDrawnNames);
-
-    // 다음 턴으로 (현재 턴 스냅샷을 함께 전달하여 중복 호출 방지)
-    if (typeof latestState.current_order === 'number') {
-      await nextTurn(latestState.current_order);
-    }
-  };
+      // 다음 턴으로 (현재 턴 스냅샷을 함께 전달하여 중복 호출 방지)
+      if (typeof latestState.current_order === 'number') {
+        await nextTurn(latestState.current_order);
+      }
+    },
+    [gameState, isDrawing, setFinalRanking],
+  );
 
   // 관리자 게임 초기화
   const handleResetGame = useCallback(async () => {
@@ -475,47 +478,10 @@ export function BingoGame({
   // 내 순위 계산 (채팅 자랑용)
   const myRank = useMemo(() => {
     if (!user || !gameState?.is_started) return undefined;
-    const rankedPlayers = players
-      .filter((p) => p.order > 0)
-      .toSorted((a, b) => {
-        const aValidCount = a.board.filter(
-          (item) => item && item !== '',
-        ).length;
-        const bValidCount = b.board.filter(
-          (item) => item && item !== '',
-        ).length;
-        const aComplete = aValidCount === 25 && a.score === 12;
-        const bComplete = bValidCount === 25 && b.score === 12;
-
-        // 12줄 완성자 우선
-        if (aComplete !== bComplete) return bComplete ? 1 : -1;
-        // 점수 높은 순
-        return b.score - a.score;
-      });
-    const myIndex = rankedPlayers.findIndex((p) => p.id === user.id);
-    if (myIndex === -1) return undefined;
-
-    // 공동 순위 계산
-    let rank = 1;
-    for (let i = 0; i < myIndex; i++) {
-      const prev = rankedPlayers[i];
-      const curr = rankedPlayers[i + 1];
-      if (!prev || !curr) continue;
-
-      const prevValidCount = prev.board.filter(
-        (item) => item && item !== '',
-      ).length;
-      const currValidCount = curr.board.filter(
-        (item) => item && item !== '',
-      ).length;
-      const prevComplete = prevValidCount === 25 && prev.score === 12;
-      const currComplete = currValidCount === 25 && curr.score === 12;
-
-      if (prev.score !== curr.score || prevComplete !== currComplete) {
-        rank = i + 2;
-      }
-    }
-    return rank;
+    const activePlayers = players.filter((p) => p.order > 0);
+    const rankedPlayers = sortPlayersByCompleteThenScore(activePlayers);
+    const rankMap = calculateRankMap(rankedPlayers);
+    return rankMap.get(user.id);
   }, [user, gameState?.is_started, players]);
 
   // 뽑은 이름 목록 자동 스크롤
@@ -678,7 +644,7 @@ export function BingoGame({
         playerOrder={myPlayer?.order ?? 0}
         isMyTurn={isMyTurn ?? false}
         isDrawing={isDrawing}
-        onSelectForDraw={(name) => void handleSelectDraw(name)}
+        onSelectForDraw={handleSelectDraw}
         onRegisterActions={setBoardActions}
         onBoardChange={setLocalBoard}
       />

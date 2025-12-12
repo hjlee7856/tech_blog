@@ -4,10 +4,12 @@ export const Container = styled('div', {
   base: {
     width: '100%',
     maxWidth: '100%',
-    backgroundColor: '#2B2D31',
+    backgroundColor: '#232428',
+    border: '1px solid #313338',
     borderRadius: '12px',
     padding: '12px',
     marginTop: '16px',
+    boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)',
     display: 'flex',
     flexDirection: 'column',
     md: {
@@ -73,7 +75,8 @@ export const MessageList = styled('div', {
     overflowY: 'auto',
     marginBottom: '10px',
     padding: '8px',
-    backgroundColor: '#1E1F22',
+    backgroundColor: '#111214',
+    border: '1px solid #2B2D31',
     borderRadius: '8px',
     md: {
       maxHeight: '400px',
@@ -89,8 +92,10 @@ export const MessageItem = styled('div', {
     gap: '8px',
     padding: '6px 8px',
     borderRadius: '6px',
-    backgroundColor: '#3F4147',
+    backgroundColor: '#2B2D31',
+    border: '1px solid #313338',
     fontSize: '13px',
+    lineHeight: '1.35',
     md: {
       fontSize: '14px',
       padding: '8px 10px',
@@ -159,7 +164,7 @@ export const MessageName = styled('span', {
   base: {
     fontSize: '13px',
     fontWeight: 'bold',
-    color: '#B5BAC1',
+    color: '#DDE0E6',
     md: {
       fontSize: '13px',
     },
@@ -172,7 +177,8 @@ export const MessageText = styled('span', {
     alignItems: 'center',
     gap: '6px',
     fontSize: '14px',
-    color: 'white',
+    color: '#F2F3F5',
+    lineHeight: '1.4',
     wordBreak: 'break-word',
     md: {
       fontSize: '15px',
@@ -257,14 +263,14 @@ export const ChatInput = styled('input', {
     flex: 1,
     padding: '10px 12px',
     fontSize: '13px',
-    color: 'white',
-    backgroundColor: '#1E1F22',
-    border: '1px solid #3F4147',
+    color: '#F2F3F5',
+    backgroundColor: '#0F1012',
+    border: '1px solid #2B2D31',
     borderRadius: '8px',
     outline: 'none',
     _focus: {
       borderColor: '#5865F2',
-      boxShadow: '0 0 0 2px rgba(88, 101, 242, 0.35)',
+      boxShadow: '0 0 0 3px rgba(88, 101, 242, 0.28)',
     },
     _placeholder: {
       color: '#72767D',

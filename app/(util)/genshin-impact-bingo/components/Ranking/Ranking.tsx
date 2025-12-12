@@ -9,8 +9,10 @@ import {
   subscribeToOnlinePlayersRanking,
   type Player,
 } from '../../lib/game';
+import { calculateRankMap } from '../../lib/ranking';
 import {
-  AvatarGroup,
+  AvatarStack,
+  AvatarStackItem,
   Container,
   ExpandButton,
   PlayerInfo,
@@ -30,31 +32,6 @@ function getRankVariant(rank: number): 1 | 2 | 3 | undefined {
   if (rank === 2) return 2;
   if (rank === 3) return 3;
   return undefined;
-}
-
-// 공동 순위 계산 (25칸 완성자 우선)
-function calculateRanks(players: Player[]): Map<number, number> {
-  const rankMap = new Map<number, number>();
-  let currentRank = 1;
-  let prevScore = -1;
-  let prevComplete = false;
-
-  for (const [index, player] of players.entries()) {
-    const validCount = player.board.filter(
-      (item) => item && item !== '',
-    ).length;
-    const isComplete = validCount === 25 && player.score === 12;
-
-    // 점수가 다르거나 완성 상태가 다르면 순위 변경
-    if (player.score !== prevScore || isComplete !== prevComplete) {
-      currentRank = index + 1;
-    }
-    rankMap.set(player.id, currentRank);
-    prevScore = player.score;
-    prevComplete = isComplete;
-  }
-
-  return rankMap;
 }
 
 interface RankingProps {
@@ -90,7 +67,7 @@ export function Ranking({ isGameStarted, userId, isSpectator }: RankingProps) {
     };
   }, []);
 
-  const rankMap = calculateRanks(players);
+  const rankMap = calculateRankMap(players);
 
   // 공동 순위별로 플레이어 그룹화
   const rankedGroups = useMemo(() => {
@@ -159,9 +136,9 @@ export function Ranking({ isGameStarted, userId, isSpectator }: RankingProps) {
               <RankItem key={rank} rank={getRankVariant(rank)} isMe={hasMe}>
                 <RankNumber>{rank}위</RankNumber>
                 <PlayerInfo>
-                  <AvatarGroup>
-                    {groupPlayers.map((player) => (
-                      <ProfileImage key={player.id}>
+                  <AvatarStack>
+                    {groupPlayers.slice(0, 5).map((player) => (
+                      <AvatarStackItem key={player.id}>
                         <Image
                           src={getProfileImagePath(
                             player.profile_image || 'Nahida',
@@ -171,9 +148,9 @@ export function Ranking({ isGameStarted, userId, isSpectator }: RankingProps) {
                           height={24}
                           style={{ borderRadius: '50%', objectFit: 'cover' }}
                         />
-                      </ProfileImage>
+                      </AvatarStackItem>
                     ))}
-                  </AvatarGroup>
+                  </AvatarStack>
                   <PlayerNameWrapper>
                     <PlayerName>{names}</PlayerName>
                     {!isGameStarted && groupPlayers.some((p) => p.is_ready) && (
