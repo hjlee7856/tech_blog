@@ -16,6 +16,17 @@ export const Container = styled('div', {
       marginTop: '20px',
     },
   },
+  variants: {
+    isSpectator: {
+      true: {
+        width: '100%',
+        maxWidth: '100%',
+        md: {
+          maxWidth: '100%',
+        },
+      },
+    },
+  },
 });
 
 export const OnlineDot = styled('span', {

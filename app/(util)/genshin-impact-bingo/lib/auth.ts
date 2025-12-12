@@ -22,6 +22,16 @@ export function getProfileImagePath(englishName: string): string {
 
 const STORAGE_KEY = 'genshin-bingo-user';
 
+interface StoredUserV2 {
+  userId: number;
+  hashedPassword: string;
+}
+
+interface StoredUserV1 {
+  name: string;
+  hashedPassword: string;
+}
+
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -31,17 +41,27 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 export async function register(
-  name: string,
+  loginId: string,
+  nickname: string,
   password: string,
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
-    const { data: existing } = await supabase
+    const { data: existingLoginId } = await supabase
       .from('genshin-bingo-game-user')
       .select('id')
-      .eq('name', name)
+      .eq('login_id', loginId)
       .single();
 
-    if (existing)
+    if (existingLoginId)
+      return { success: false, error: '이미 존재하는 아이디입니다.' };
+
+    const { data: existingNickname } = await supabase
+      .from('genshin-bingo-game-user')
+      .select('id')
+      .eq('name', nickname)
+      .single();
+
+    if (existingNickname)
       return { success: false, error: '이미 존재하는 닉네임입니다.' };
 
     const hashedPassword = await hashPassword(password);
@@ -51,7 +71,8 @@ export async function register(
     const { data, error } = await supabase
       .from('genshin-bingo-game-user')
       .insert({
-        name,
+        login_id: loginId,
+        name: nickname,
         password: hashedPassword,
         score: 0,
         order: 0,
@@ -72,7 +93,7 @@ export async function register(
 }
 
 export async function login(
-  name: string,
+  loginId: string,
   password: string,
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
@@ -81,11 +102,11 @@ export async function login(
     const { data, error } = await supabase
       .from('genshin-bingo-game-user')
       .select('id, name, password, score, order, is_admin, profile_image')
-      .eq('name', name)
+      .eq('login_id', loginId)
       .single();
 
     if (error || !data)
-      return { success: false, error: '존재하지 않는 닉네임입니다.' };
+      return { success: false, error: '존재하지 않는 아이디입니다.' };
     if (data.password !== hashedPassword)
       return { success: false, error: '비밀번호가 일치하지 않습니다.' };
 
@@ -109,16 +130,27 @@ export async function autoLogin(): Promise<{ success: boolean; user?: User }> {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return { success: false };
 
-    const { name, hashedPassword } = JSON.parse(stored) as {
-      name: string;
-      hashedPassword: string;
-    };
+    const parsed = JSON.parse(stored) as Partial<StoredUserV2 & StoredUserV1>;
+    const hashedPassword = parsed.hashedPassword;
+    if (!hashedPassword) {
+      localStorage.removeItem(STORAGE_KEY);
+      return { success: false };
+    }
 
-    const { data, error } = await supabase
+    const userId =
+      typeof parsed.userId === 'number' ? parsed.userId : undefined;
+    const legacyName =
+      typeof parsed.name === 'string' ? parsed.name : undefined;
+
+    const query = supabase
       .from('genshin-bingo-game-user')
-      .select('id, name, password, score, order, is_admin, profile_image')
-      .eq('name', name)
-      .single();
+      .select('id, name, password, score, order, is_admin, profile_image');
+
+    const { data, error } = userId
+      ? await query.eq('id', userId).single()
+      : legacyName
+        ? await query.eq('name', legacyName).single()
+        : { data: null, error: new Error('invalid storage') };
 
     if (error || !data || data.password !== hashedPassword) {
       localStorage.removeItem(STORAGE_KEY);
@@ -133,6 +165,8 @@ export async function autoLogin(): Promise<{ success: boolean; user?: User }> {
       is_admin: data.is_admin,
       profile_image: data.profile_image || DEFAULT_PROFILE_NAME,
     };
+
+    saveToStorage(user, hashedPassword);
     return { success: true, user };
   } catch {
     return { success: false };
@@ -194,12 +228,6 @@ export async function updateNickname(
       return { success: false, error: error.message };
     }
 
-    // 로컬 스토리지 업데이트
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ name: newName, hashedPassword }),
-    );
-
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -209,6 +237,6 @@ export async function updateNickname(
 function saveToStorage(user: User, hashedPassword: string): void {
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ name: user.name, hashedPassword }),
+    JSON.stringify({ userId: user.id, hashedPassword }),
   );
 }

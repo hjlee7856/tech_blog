@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getProfileImagePath,
@@ -67,6 +68,7 @@ import {
   playSelectSound,
 } from '../../lib/sounds';
 import { Chat } from '../Chat';
+import { ModeSelectModal } from '../ModeSelectModal';
 import { NicknameChangeModal } from '../NicknameChangeModal';
 import { ReadyStatus } from '../ReadyStatus';
 import { AdminMenu } from './AdminMenu';
@@ -87,10 +89,14 @@ export function BingoGame({
   characterNames,
   characterEnNames,
 }: BingoGameProps) {
+  const router = useRouter();
   // 모달 상태
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalRanking, setFinalRanking] = useState<Player[]>([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [hasDismissedProfileSetup, setHasDismissedProfileSetup] =
+    useState(false);
+  const [hasSelectedMode, setHasSelectedMode] = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBoardClearConfirm, setShowBoardClearConfirm] = useState(false);
@@ -189,6 +195,8 @@ export function BingoGame({
 
   const handleLogin = async (loggedInUser: User) => {
     setUser(loggedInUser);
+    setHasDismissedProfileSetup(false);
+    setHasSelectedMode(false);
 
     const [currentGameState, playerList] = await Promise.all([
       getGameState(),
@@ -216,9 +224,25 @@ export function BingoGame({
   };
 
   const handleLogout = async () => {
+    if (user) localStorage.removeItem(`genshin-bingo-selected-mode:${user.id}`);
     logout();
     setUser(null);
+    setHasDismissedProfileSetup(false);
+    setHasSelectedMode(false);
   };
+
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(
+      `genshin-bingo-selected-mode:${user.id}`,
+    );
+    if (stored) {
+      setHasSelectedMode(true);
+      return;
+    }
+
+    setHasSelectedMode(false);
+  }, [user]);
 
   const handleToggleReady = useCallback(async () => {
     if (!user) return;
@@ -712,12 +736,42 @@ export function BingoGame({
 
       {/* 프로필 변경 모달 */}
       <ProfileSelectModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
+        isOpen={
+          showProfileModal ||
+          (user.profile_image === 'Arama' && !hasDismissedProfileSetup)
+        }
+        onClose={() => {
+          setShowProfileModal(false);
+          if (user.profile_image === 'Arama') setHasDismissedProfileSetup(true);
+        }}
         characterNames={characterNames}
         characterEnNames={characterEnNames}
         currentProfile={user.profile_image || 'Aino'}
         onSelect={handleProfileChange}
+      />
+
+      <ModeSelectModal
+        isOpen={
+          !hasSelectedMode &&
+          !(
+            showProfileModal ||
+            (user.profile_image === 'Arama' && !hasDismissedProfileSetup)
+          )
+        }
+        onSelectGame={() => {
+          localStorage.setItem(
+            `genshin-bingo-selected-mode:${user.id}`,
+            'game',
+          );
+          setHasSelectedMode(true);
+        }}
+        onSelectSpectator={() => {
+          localStorage.setItem(
+            `genshin-bingo-selected-mode:${user.id}`,
+            'spectator',
+          );
+          router.push('/genshin-impact-bingo/spectator');
+        }}
       />
 
       {/* 닉네임 변경 모달 */}

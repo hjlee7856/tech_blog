@@ -8,6 +8,7 @@ import {
   CharacterImage,
   CharacterName,
   CloseButton,
+  Description,
   Header,
   ListContainer,
   Modal,
@@ -73,6 +74,8 @@ export function ProfileSelectModal({
             ✕
           </CloseButton>
         </Header>
+
+        <Description>프로필 사진을 설정해주세요</Description>
 
         <SearchInput
           type="text"

@@ -123,6 +123,7 @@ interface ChatProps {
   myBoard?: (string | null)[];
   characterNames?: string[];
   characterEnNames?: string[];
+  isSpectator?: boolean;
 }
 
 export function Chat({
@@ -135,6 +136,7 @@ export function Chat({
   myBoard,
   characterNames,
   characterEnNames,
+  isSpectator,
 }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -167,12 +169,13 @@ export function Chat({
 
   const canBoast = useMemo(
     () =>
+      !isSpectator &&
       isGameStarted &&
       myScore !== undefined &&
       myScore >= 1 &&
       myRank !== undefined &&
       myRank <= 3,
-    [isGameStarted, myScore, myRank],
+    [isSpectator, isGameStarted, myScore, myRank],
   );
 
   useEffect(() => {
@@ -280,7 +283,7 @@ export function Chat({
   );
 
   return (
-    <Container>
+    <Container isSpectator={isSpectator}>
       <Title>원직쉼 빙고 채팅방</Title>
       <MessageList ref={messageListRef}>
         {messages.length === 0 ? (
@@ -309,7 +312,7 @@ export function Chat({
           />
           <ButtonSection>
             <RequestButtonGroup>
-              {isGameStarted && (
+              {!isSpectator && isGameStarted && (
                 <RequestButton
                   type="button"
                   onClick={handleToggleRequestPanel}
@@ -318,7 +321,7 @@ export function Chat({
                   요청하기
                 </RequestButton>
               )}
-              {canBoast && (
+              {!isSpectator && canBoast && (
                 <BoastButton
                   onClick={() => void handleBoast()}
                   disabled={isSending}
@@ -334,7 +337,7 @@ export function Chat({
               전송
             </SendButton>
           </ButtonSection>
-          {isGameStarted && isRequestPanelOpen && (
+          {!isSpectator && isGameStarted && isRequestPanelOpen && (
             <RequestCharacterPanel>
               {myBoardCharacterNames.length === 0 && (
                 <RequestCharacterLabel>

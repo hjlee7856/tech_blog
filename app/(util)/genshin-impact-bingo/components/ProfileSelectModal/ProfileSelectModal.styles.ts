@@ -46,6 +46,15 @@ export const Title = styled('h2', {
   },
 });
 
+export const Description = styled('p', {
+  base: {
+    margin: 0,
+    fontSize: '13px',
+    lineHeight: '1.4',
+    color: '#B5BAC1',
+  },
+});
+
 export const CloseButton = styled('button', {
   base: {
     backgroundColor: 'transparent',

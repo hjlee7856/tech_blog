@@ -1,9 +1,13 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { DrawnNamesTitle } from '../../components/BingoGame/BingoGame.styles';
-import { useOnlineSnapshotUserIds } from '../../components/BingoGame/hooks';
+import { Chat } from '../../components/Chat';
+import { LoginModal } from '../../components/LoginModal/LoginModal';
+import { ProfileSelectModal } from '../../components/ProfileSelectModal';
 import { Ranking } from '../../components/Ranking';
+import { autoLogin, updateProfileImage, type User } from '../../lib/auth';
 import {
   getAllPlayers,
   getGameState,
@@ -26,12 +30,48 @@ import {
   Title,
 } from './SpectatorPanel.styles';
 
-export function SpectatorPanel() {
+interface SpectatorPanelProps {
+  characterNames: string[];
+  characterEnNames: string[];
+}
+
+export function SpectatorPanel({
+  characterNames,
+  characterEnNames,
+}: SpectatorPanelProps) {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { onlineUserIds } = useOnlineSnapshotUserIds();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [hasDismissedProfileSetup, setHasDismissedProfileSetup] =
+    useState(false);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const result = await autoLogin();
+      if (result.success && result.user) setUser(result.user);
+      setIsAuthLoading(false);
+    };
+    void initAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const key = `genshin-bingo-selected-mode:${user.id}`;
+    const stored = localStorage.getItem(key);
+    if (stored === 'game') {
+      router.push('/genshin-impact-bingo');
+      return;
+    }
+
+    if (stored) return;
+
+    localStorage.setItem(key, 'spectator');
+  }, [router, user?.id]);
 
   useEffect(() => {
     const init = async () => {
@@ -51,33 +91,47 @@ export function SpectatorPanel() {
 
     const playersSubscription = subscribeToPlayers((playerList) => {
       setPlayers(playerList);
-      // 선택된 플레이어 정보 업데이트
-      if (selectedPlayer) {
-        const updated = playerList.find((p) => p.id === selectedPlayer.id);
-        if (updated) setSelectedPlayer(updated);
-      }
     });
 
     return () => {
       void gameSubscription.unsubscribe();
       void playersSubscription.unsubscribe();
     };
-  }, [selectedPlayer]);
-
-  // 온라인 플레이어만 필터링 (last_seen 스냅샷 기반)
-  const onlinePlayers = players.filter((p) => onlineUserIds.includes(p.id));
+  }, []);
 
   const currentTurnPlayer = players.find(
     (p) => p.order === gameState?.current_order,
   );
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <Container>
         <Title>로딩 중...</Title>
       </Container>
     );
   }
+
+  if (!user) {
+    return (
+      <LoginModal
+        onLogin={(nextUser) => {
+          setUser(nextUser);
+          setHasDismissedProfileSetup(false);
+        }}
+      />
+    );
+  }
+
+  const handleSelectProfile = async (englishName: string) => {
+    const ok = await updateProfileImage(user.id, englishName);
+    if (!ok) return;
+    setUser((prev) => {
+      if (!prev) return prev;
+      return { ...prev, profile_image: englishName };
+    });
+    setShowProfileModal(false);
+    setHasDismissedProfileSetup(false);
+  };
 
   return (
     <Container>
@@ -119,7 +173,30 @@ export function SpectatorPanel() {
 
       <MainContent>
         <Ranking isGameStarted={gameState?.is_started} isSpectator={true} />
+
+        <Chat
+          userId={user.id}
+          userName={user.name}
+          profileImage={user.profile_image}
+          isGameStarted={gameState?.is_started}
+          isSpectator={true}
+        />
       </MainContent>
+
+      <ProfileSelectModal
+        isOpen={
+          showProfileModal ||
+          (user.profile_image === 'Arama' && !hasDismissedProfileSetup)
+        }
+        onClose={() => {
+          setShowProfileModal(false);
+          if (user.profile_image === 'Arama') setHasDismissedProfileSetup(true);
+        }}
+        characterNames={characterNames}
+        characterEnNames={characterEnNames}
+        currentProfile={user.profile_image}
+        onSelect={handleSelectProfile}
+      />
 
       {/* 뽑은 이름 목록 */}
       {gameState?.is_started && gameState.drawn_names.length > 0 && (

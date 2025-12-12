@@ -141,6 +141,14 @@ export const ErrorMessage = styled('p', {
   },
 });
 
+export const HelperText = styled('p', {
+  base: {
+    color: '#B5BAC1',
+    fontSize: '12px',
+    margin: 0,
+  },
+});
+
 export const UserInfo = styled('div', {
   base: {
     display: 'flex',

@@ -1,17 +1,16 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { login, register, type User } from '../../lib/auth';
 import {
   Backdrop,
   ErrorMessage,
   Form,
+  HelperText,
   Input,
   InputGroup,
   Label,
   Modal,
-  SpectatorButton,
   SubmitButton,
   Title,
   ToggleButton,
@@ -22,9 +21,9 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ onLogin }: LoginModalProps) {
-  const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState('');
+  const [loginId, setLoginId] = useState('');
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,8 +33,13 @@ export function LoginModal({ onLogin }: LoginModalProps) {
     e.preventDefault();
     setError('');
 
-    if (!name.trim() || !password.trim()) {
-      setError('닉네임과 비밀번호를 입력해주세요.');
+    if (!loginId.trim() || !password.trim()) {
+      setError('아이디와 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (isRegister && !nickname.trim()) {
+      setError('닉네임을 입력해주세요.');
       return;
     }
 
@@ -47,8 +51,8 @@ export function LoginModal({ onLogin }: LoginModalProps) {
     setIsLoading(true);
 
     const result = isRegister
-      ? await register(name.trim(), password)
-      : await login(name.trim(), password);
+      ? await register(loginId.trim(), nickname.trim(), password)
+      : await login(loginId.trim(), password);
 
     setIsLoading(false);
 
@@ -71,15 +75,29 @@ export function LoginModal({ onLogin }: LoginModalProps) {
         <Title>{isRegister ? '회원가입' : '로그인'}</Title>
         <Form onSubmit={handleSubmit}>
           <InputGroup>
-            <Label>닉네임</Label>
+            <Label>아이디</Label>
             <Input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="닉네임을 입력하세요"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="아이디를 입력하세요"
               maxLength={20}
             />
           </InputGroup>
+
+          {isRegister && (
+            <InputGroup>
+              <Label>닉네임</Label>
+              <Input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="닉네임을 입력하세요"
+                maxLength={20}
+              />
+              <HelperText>닉네임은 추후 변경 가능합니다</HelperText>
+            </InputGroup>
+          )}
 
           <InputGroup>
             <Label>비밀번호</Label>
@@ -108,13 +126,6 @@ export function LoginModal({ onLogin }: LoginModalProps) {
           <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? '처리 중...' : isRegister ? '가입하기' : '로그인'}
           </SubmitButton>
-
-          <SpectatorButton
-            type="button"
-            onClick={() => router.push('/genshin-impact-bingo/spectator')}
-          >
-            관전하기
-          </SpectatorButton>
         </Form>
 
         <ToggleButton type="button" onClick={toggleMode}>
