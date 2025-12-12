@@ -23,15 +23,21 @@ import {
   MessageHeaderContainer,
   MessageItem,
   MessageList,
+  MessageListWrapper,
   MessageName,
   MessageProfile,
   MessageText,
   MessageTime,
+  NewMessageToast,
+  NewMessageToastAvatar,
+  NewMessageToastBadge,
+  NewMessageToastText,
   RequestButton,
   RequestButtonGroup,
   RequestCharacterItem,
   RequestCharacterLabel,
   RequestCharacterPanel,
+  ScrollToBottomFloatingButton,
   SendButton,
   Title,
   TypingAvatar,
@@ -156,8 +162,10 @@ export function Chat({
   const [isSending, setIsSending] = useState(false);
   const [isRequestPanelOpen, setIsRequestPanelOpen] = useState(false);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const messageListRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
+  const isPinnedToBottomRef = useRef(true);
 
   const { typingUsers, typingText, onLocalInputActivity, stopTyping } =
     useChatPresence({
@@ -209,37 +217,94 @@ export function Chat({
     };
   }, []);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
+    const element = messageListRef.current;
+    if (!element) return;
+
+    element.scrollTop = element.scrollHeight;
+    setIsAutoScrollEnabled(true);
+    setUnreadCount(0);
+    isPinnedToBottomRef.current = true;
+  }, []);
+
+  const handleMessageListScroll = useCallback(() => {
     const element = messageListRef.current;
     if (!element) return;
 
     const thresholdPx = 24;
+    const nextIsEnabled = isNearBottom({ element, thresholdPx });
 
-    const handleScroll = () => {
-      const nextIsEnabled = isNearBottom({ element, thresholdPx });
-      setIsAutoScrollEnabled((prev) => {
-        if (prev === nextIsEnabled) return prev;
-        return nextIsEnabled;
-      });
-    };
+    isPinnedToBottomRef.current = nextIsEnabled;
 
-    handleScroll();
-    element.addEventListener('scroll', handleScroll);
-    return () => {
-      element.removeEventListener('scroll', handleScroll);
-    };
+    setIsAutoScrollEnabled((prev) => {
+      if (prev === nextIsEnabled) return prev;
+      return nextIsEnabled;
+    });
   }, []);
 
   useEffect(() => {
-    if (
-      messages.length > prevMessageCountRef.current &&
-      messageListRef.current &&
-      isAutoScrollEnabled
-    ) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    const element = messageListRef.current;
+    const nextCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+
+    if (!element) {
+      prevMessageCountRef.current = nextCount;
+      return;
     }
+
+    const latest = messages.at(-1);
+    const isFromMe = !!userId && latest?.user_id === userId;
+    const shouldStickToBottom = isPinnedToBottomRef.current || isFromMe;
+
+    if (nextCount > prevCount && shouldStickToBottom) {
+      scrollToBottom();
+      prevMessageCountRef.current = messages.length;
+      return;
+    }
+
+    const thresholdPx = 24;
+    const isNear = isNearBottom({ element, thresholdPx });
+
+    setIsAutoScrollEnabled(isNear);
+    isPinnedToBottomRef.current = isNear;
+
+    if (nextCount > prevCount && !isNear)
+      setUnreadCount((prev) => prev + (nextCount - prevCount));
+
     prevMessageCountRef.current = messages.length;
-  }, [messages.length, isAutoScrollEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    messages.length,
+    isAutoScrollEnabled,
+    scrollToBottom,
+    handleMessageListScroll,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (!isAutoScrollEnabled) return;
+    if (unreadCount === 0) return;
+    setUnreadCount(0);
+  }, [isAutoScrollEnabled, unreadCount]);
+
+  const latestUnreadPreview = useMemo(() => {
+    if (unreadCount === 0) return '';
+    if (messages.length === 0) return '';
+
+    const latest = messages.at(-1);
+    if (!latest) return '';
+
+    const text = latest.message?.trim() ?? '';
+    if (!text) return `${latest.user_name}님의 새 메시지`;
+    return `${latest.user_name}: ${text}`;
+  }, [messages, unreadCount]);
+
+  const latestUnreadProfileImageKey = useMemo(() => {
+    if (unreadCount === 0) return null;
+    const latest = messages.at(-1);
+    if (!latest) return null;
+    return latest.profile_image || 'Arama';
+  }, [messages, unreadCount]);
 
   const handleSend = useCallback(async () => {
     if (!userId || !userName || !inputValue.trim() || isSending) return;
@@ -254,11 +319,20 @@ export function Chat({
       );
       setInputValue('');
       setIsRequestPanelOpen(false);
+      scrollToBottom();
     } finally {
       stopTyping();
       setIsSending(false);
     }
-  }, [userId, userName, profileImage, inputValue, isSending, stopTyping]);
+  }, [
+    userId,
+    userName,
+    profileImage,
+    inputValue,
+    isSending,
+    stopTyping,
+    scrollToBottom,
+  ]);
 
   const handleBoast = useCallback(async () => {
     if (!userId || !userName || !canBoast || isSending || !myScore || !myRank)
@@ -276,7 +350,17 @@ export function Chat({
       myRank,
     );
     setIsSending(false);
-  }, [userId, userName, profileImage, canBoast, isSending, myScore, myRank]);
+    scrollToBottom();
+  }, [
+    userId,
+    userName,
+    profileImage,
+    canBoast,
+    isSending,
+    myScore,
+    myRank,
+    scrollToBottom,
+  ]);
 
   const handleToggleRequestPanel = useCallback(() => {
     if (!userId || !userName) return;
@@ -302,8 +386,9 @@ export function Chat({
       setInputValue('');
       setIsSending(false);
       setIsRequestPanelOpen(false);
+      scrollToBottom();
     },
-    [userId, userName, profileImage, isSending, nameMap],
+    [userId, userName, profileImage, isSending, nameMap, scrollToBottom],
   );
 
   const handleKeyDown = useCallback(
@@ -328,20 +413,46 @@ export function Chat({
   return (
     <Container isSpectator={isSpectator}>
       <Title>원직쉼 빙고 채팅방</Title>
-      <MessageList ref={messageListRef}>
-        {messages.length === 0 ? (
-          <EmptyMessage>아직 메시지가 없습니다</EmptyMessage>
-        ) : (
-          messages.map((msg) => (
-            <ChatMessageItem
-              key={msg.id}
-              msg={msg}
-              isMe={msg.user_id === userId}
-              isTyping={typingUsers.some((u) => u.id === msg.user_id)}
-            />
-          ))
+      <MessageListWrapper>
+        <MessageList ref={messageListRef} onScroll={handleMessageListScroll}>
+          {messages.length === 0 ? (
+            <EmptyMessage>아직 메시지가 없습니다</EmptyMessage>
+          ) : (
+            messages.map((msg) => (
+              <ChatMessageItem
+                key={msg.id}
+                msg={msg}
+                isMe={msg.user_id === userId}
+                isTyping={typingUsers.some((u) => u.id === msg.user_id)}
+              />
+            ))
+          )}
+        </MessageList>
+
+        {unreadCount > 0 && !isAutoScrollEnabled && (
+          <NewMessageToast type="button" onClick={scrollToBottom}>
+            {latestUnreadProfileImageKey && (
+              <NewMessageToastAvatar>
+                <Image
+                  src={getProfileImagePath(latestUnreadProfileImageKey)}
+                  alt={latestUnreadProfileImageKey}
+                  width={24}
+                  height={24}
+                  style={{ borderRadius: '50%', objectFit: 'cover' }}
+                />
+              </NewMessageToastAvatar>
+            )}
+            <NewMessageToastText>{latestUnreadPreview}</NewMessageToastText>
+            <NewMessageToastBadge>{unreadCount}</NewMessageToastBadge>
+          </NewMessageToast>
         )}
-      </MessageList>
+
+        {unreadCount === 0 && !isAutoScrollEnabled && (
+          <ScrollToBottomFloatingButton type="button" onClick={scrollToBottom}>
+            ↓
+          </ScrollToBottomFloatingButton>
+        )}
+      </MessageListWrapper>
       {userId && (
         <InputSection>
           <TypingIndicator>

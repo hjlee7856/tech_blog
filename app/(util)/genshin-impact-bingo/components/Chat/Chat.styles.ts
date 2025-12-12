@@ -12,6 +12,7 @@ export const Container = styled('div', {
     boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)',
     display: 'flex',
     flexDirection: 'column',
+    position: 'relative',
     md: {
       maxWidth: '600px',
       padding: '16px',
@@ -66,20 +67,26 @@ export const Title = styled('h3', {
   },
 });
 
+export const MessageListWrapper = styled('div', {
+  base: {
+    position: 'relative',
+    marginBottom: '10px',
+  },
+});
+
 export const MessageList = styled('div', {
   base: {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    maxHeight: '300px',
+    maxHeight: '400px',
     overflowY: 'auto',
-    marginBottom: '10px',
     padding: '8px',
     backgroundColor: '#111214',
     border: '1px solid #2B2D31',
     borderRadius: '8px',
     md: {
-      maxHeight: '400px',
+      maxHeight: '500px',
       gap: '8px',
     },
   },
@@ -428,6 +435,111 @@ export const EmptyMessage = styled('div', {
     padding: '20px',
     md: {
       fontSize: '14px',
+    },
+  },
+});
+
+export const NewMessageToast = styled('button', {
+  base: {
+    width: '100%',
+    paddingInline: '12px',
+    position: 'absolute',
+    bottom: '0px',
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '1px solid rgba(88, 101, 242, 0.55)',
+    backgroundColor: 'rgba(88, 101, 242, 0.18)',
+    color: '#F2F3F5',
+    fontSize: '12px',
+    cursor: 'pointer',
+    backdropFilter: 'blur(6px)',
+    textAlign: 'left',
+    _hover: {
+      backgroundColor: 'rgba(88, 101, 242, 0.26)',
+    },
+    _focusVisible: {
+      outline: 'none',
+      boxShadow: '0 0 0 3px rgba(88, 101, 242, 0.28)',
+    },
+    md: {
+      fontSize: '13px',
+    },
+  },
+});
+
+export const NewMessageToastAvatar = styled('span', {
+  base: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '9999px',
+    overflow: 'hidden',
+    flexShrink: 0,
+    border: '2px solid rgba(17, 18, 20, 0.9)',
+    boxSizing: 'border-box',
+  },
+});
+
+export const NewMessageToastText = styled('span', {
+  base: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: '#DDE0E6',
+    flex: 1,
+  },
+});
+
+export const NewMessageToastBadge = styled('span', {
+  base: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2px 8px',
+    minWidth: '34px',
+    borderRadius: '9999px',
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(88, 101, 242, 0.55)',
+    color: '#FFFFFF',
+    flexShrink: 0,
+  },
+});
+
+export const ScrollToBottomFloatingButton = styled('button', {
+  base: {
+    position: 'absolute',
+    right: '12px',
+    bottom: '12px',
+    zIndex: 10,
+    width: '40px',
+    height: '40px',
+    borderRadius: '9999px',
+    border: '1px solid #2B2D31',
+    backgroundColor: '#111214',
+    color: '#F2F3F5',
+    cursor: 'pointer',
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.35)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'transform 0.12s ease, background-color 0.12s ease',
+    _hover: {
+      backgroundColor: '#1E1F22',
+      transform: 'translateY(-1px)',
+    },
+    _focusVisible: {
+      outline: 'none',
+      boxShadow: '0 0 0 3px rgba(88, 101, 242, 0.28)',
+    },
+    md: {
+      right: '16px',
+      bottom: '16px',
+      width: '44px',
+      height: '44px',
     },
   },
 });
