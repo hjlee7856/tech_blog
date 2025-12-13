@@ -8,6 +8,7 @@ export default [
   {
     files: ['**/*.ts', '**/*.tsx'],
     rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
       'react/prop-types': 'off',
       'unicorn/no-array-reduce': 'off',
       'unicorn/filename-case': 'off',
