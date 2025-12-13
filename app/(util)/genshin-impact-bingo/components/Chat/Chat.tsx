@@ -362,13 +362,13 @@ export function Chat({
     scrollToBottom,
   ]);
 
-  const handleToggleRequestPanel = useCallback(() => {
+  const _handleToggleRequestPanel = useCallback(() => {
     if (!userId || !userName) return;
     if (!isGameStarted) return;
     setIsRequestPanelOpen((prev) => !prev);
   }, [userId, userName, isGameStarted]);
 
-  const handleSendRequest = useCallback(
+  const _handleSendRequest = useCallback(
     async ({ characterName }: { characterName: string }) => {
       if (!userId || !userName || isSending) return;
 
