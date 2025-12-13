@@ -486,15 +486,6 @@ export function Chat({
           />
           <ButtonSection>
             <RequestButtonGroup>
-              {!isSpectator && isGameStarted && (
-                <RequestButton
-                  type="button"
-                  onClick={handleToggleRequestPanel}
-                  disabled={isSending}
-                >
-                  요청하기
-                </RequestButton>
-              )}
               {!isSpectator && canBoast && (
                 <BoastButton
                   onClick={() => void handleBoast()}
