@@ -716,7 +716,7 @@ export function BingoGame({
         onSelect={handleProfileChange}
       />
 
-      <ModeSelectModal
+      {/* <ModeSelectModal
         isOpen={
           !hasSelectedMode &&
           !(
@@ -738,7 +738,7 @@ export function BingoGame({
           );
           router.push('/genshin-impact-bingo/spectator');
         }}
-      />
+      /> */}
 
       {/* 닉네임 변경 모달 */}
       <NicknameChangeModal
