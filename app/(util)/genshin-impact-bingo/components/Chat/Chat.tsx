@@ -502,36 +502,6 @@ export function Chat({
               전송
             </SendButton>
           </ButtonSection>
-          {!isSpectator && isGameStarted && isRequestPanelOpen && (
-            <RequestCharacterPanel>
-              {myBoardCharacterNames.length === 0 && (
-                <RequestCharacterLabel>
-                  보드에 캐릭터가 없어서 요청할 수 없습니다
-                </RequestCharacterLabel>
-              )}
-              {myBoardCharacterNames.map((characterName) => {
-                const characterKey = nameMap.get(characterName) ?? 'Aino';
-                return (
-                  <RequestCharacterItem
-                    key={characterName}
-                    type="button"
-                    onClick={() => void handleSendRequest({ characterName })}
-                  >
-                    <Image
-                      src={getProfileImagePath(characterKey)}
-                      alt={characterName}
-                      width={40}
-                      height={40}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <RequestCharacterLabel>
-                      {characterName}
-                    </RequestCharacterLabel>
-                  </RequestCharacterItem>
-                );
-              })}
-            </RequestCharacterPanel>
-          )}
         </InputSection>
       )}
     </Container>
